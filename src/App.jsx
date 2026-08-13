@@ -29,28 +29,28 @@ import {
   UserPlus,
   LogOut,
   User,
-  RefreshCw,
-  Bot,
   Copy,
   Check,
-  Terminal,
+  LockKeyhole,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 
 import { Turnstile } from "@marsidev/react-turnstile";
 import { supabase } from "./lib/supabase";
 
-const API =
-  import.meta.env.VITE_API_BASE_URL || "/api";
+/* =========================================================
+   CONFIG
+========================================================= */
 
-const TS =
+const TURNSTILE_SITE_KEY =
   import.meta.env.VITE_TURNSTILE_SITE_KEY || "";
-
 
 /* =========================================================
    CATEGORIES
 ========================================================= */
 
-const cats = [
+const CATEGORIES = [
   ["ai", "AI", Sparkles],
   ["admin", "ADMIN", Shield],
   ["cache", "CACHE", Database],
@@ -58,128 +58,83 @@ const cats = [
   ["tools", "TOOLS", Wrench],
 ];
 
-
 /* =========================================================
-   ENDPOINTS
+   API ENDPOINTS
 ========================================================= */
 
-const eps = [
-  ["ai", "GET", "AI Aiko", "/api/ai/aiko"],
-  [
-    "ai",
-    "GET",
-    "AI Lyrics Generator",
-    "/api/ai/lyricsgen",
-  ],
-  [
-    "ai",
-    "GET",
-    "AI Coder",
-    "/api/tools/aicoder",
-  ],
-  [
-    "ai",
-    "GET",
-    "Text To Image",
-    "/api/ai/text2img",
-  ],
+const ENDPOINTS = [
+  ["ai", "AI Aiko", "/api/ai/aiko"],
+  ["ai", "AI Lyrics Generator", "/api/ai/lyricsgen"],
+  ["ai", "AI Coder", "/api/tools/aicoder"],
+  ["ai", "Text To Image", "/api/ai/text2img"],
 
-  ["admin", "GET", "Health", "/api/health"],
-  ["admin", "GET", "Profile", "/api/me"],
+  ["admin", "Health", "/api/health"],
+  ["admin", "Profile", "/api/me"],
 
-  [
-    "cache",
-    "GET",
-    "Cache Status",
-    "/api/cache/status",
-  ],
-  [
-    "cache",
-    "GET",
-    "Cache Stats",
-    "/api/cache/stats",
-  ],
-  [
-    "cache",
-    "GET",
-    "Cache Clear",
-    "/api/cache/clear",
-  ],
+  ["cache", "Cache Status", "/api/cache/status"],
+  ["cache", "Cache Stats", "/api/cache/stats"],
+  ["cache", "Cache Clear", "/api/cache/clear"],
 
-  [
-    "download",
-    "GET",
-    "TikTok",
-    "/api/download/tiktok",
-  ],
-  [
-    "download",
-    "GET",
-    "Instagram",
-    "/api/download/instagram",
-  ],
-  [
-    "download",
-    "GET",
-    "YouTube",
-    "/api/download/youtube",
-  ],
-  [
-    "download",
-    "GET",
-    "Pinterest",
-    "/api/download/pinterest",
-  ],
-  [
-    "download",
-    "GET",
-    "Spotify",
-    "/api/download/spotify",
-  ],
+  ["download", "TikTok", "/api/download/tiktok"],
+  ["download", "Instagram", "/api/download/instagram"],
+  ["download", "YouTube", "/api/download/youtube"],
+  ["download", "Pinterest", "/api/download/pinterest"],
+  ["download", "Spotify", "/api/download/spotify"],
 
-  [
-    "tools",
-    "GET",
-    "QRIS Generator",
-    "/api/tools/qrisgen",
-  ],
-  [
-    "tools",
-    "GET",
-    "Short URL",
-    "/api/tools/shorturl",
-  ],
-  [
-    "tools",
-    "GET",
-    "Screenshot",
-    "/api/tools/screenshot",
-  ],
-  [
-    "tools",
-    "GET",
-    "IP Info",
-    "/api/tools/ipinfo",
-  ],
-].map(
-  ([cat, method, name, path]) => ({
-    cat,
-    method,
-    name,
-    path,
-  })
-);
+  ["tools", "QRIS Generator", "/api/tools/qrisgen"],
+  ["tools", "Short URL", "/api/tools/shorturl"],
+  ["tools", "Screenshot", "/api/tools/screenshot"],
+  ["tools", "IP Info", "/api/tools/ipinfo"],
+].map(([cat, name, path]) => ({
+  cat,
+  method: "GET",
+  name,
+  path,
+}));
 
+/* =========================================================
+   AUTH USER HOOK
+========================================================= */
+
+function useUser() {
+  const [user, setUser] = useState(undefined);
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setUser(data.session?.user || null);
+      }
+    });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        if (mounted) {
+          setUser(session?.user || null);
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  return user;
+}
 
 /* =========================================================
    NAV ITEM
 ========================================================= */
 
-function Nav({
+function NavItem({
   to,
   icon: Icon,
   label,
-  n,
   close,
 }) {
   return (
@@ -187,18 +142,14 @@ function Nav({
       to={to}
       onClick={close}
       className={({ isActive }) =>
-        "nav " + (isActive ? "active" : "")
+        `nav ${isActive ? "active" : ""}`
       }
     >
-      <Icon size={21} />
-
+      <Icon size={19} />
       <span>{label}</span>
-
-      {n && <small>{n}</small>}
     </NavLink>
   );
 }
-
 
 /* =========================================================
    MAIN SHELL
@@ -206,153 +157,90 @@ function Nav({
 
 function Shell({ children }) {
   const [open, setOpen] = useState(false);
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    supabase.auth
-      .getSession()
-      .then(({ data }) => {
-        setUser(data.session?.user || null);
-      });
-
-    const {
-      data: listener,
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        setUser(session?.user || null);
-      }
-    );
-
-    return () =>
-      listener.subscription.unsubscribe();
-  }, []);
+  const user = useUser();
 
   return (
     <>
       {/* HEADER */}
-
       <header className="top">
         <button
           className="hamb"
           onClick={() => setOpen(true)}
-          aria-label="Open navigation"
+          aria-label="Open menu"
         >
           <Menu />
         </button>
 
         <Link className="brand" to="/">
           <i>D</i>
-
-          DINSTORE <b>API</b>
+          DINSTORE
+          <b>API</b>
         </Link>
 
-        <div>
-          {user ? (
-            <Link
-              className="user"
-              to="/dashboard"
-            >
-              <User size={16} />
-              MEMBER
-            </Link>
-          ) : (
-            <Link
-              className="user"
-              to="/login"
-            >
-              <LogIn size={16} />
-              LOGIN
-            </Link>
-          )}
-        </div>
+        {user ? (
+          <Link className="user" to="/dashboard">
+            <User size={16} />
+            MEMBER
+          </Link>
+        ) : (
+          <Link className="user" to="/login">
+            <LogIn size={16} />
+            LOGIN
+          </Link>
+        )}
       </header>
-
-
-      {/* LAYOUT */}
 
       <div className="layout">
 
         {/* SIDEBAR */}
-
         <aside
-          className={
-            "side " +
-            (open ? "show" : "")
-          }
+          className={`side ${
+            open ? "show" : ""
+          }`}
         >
-
           <div className="sidehead">
-
             <div>
-              <small>
-                NAVIGATION
-              </small>
-
-              <strong>
-                DINSTORE API
-              </strong>
+              <small>NAVIGATION</small>
+              <strong>DINSTORE API</strong>
             </div>
 
             <button
               className="hamb close"
-              onClick={() =>
-                setOpen(false)
-              }
+              onClick={() => setOpen(false)}
             >
               <X />
             </button>
-
           </div>
 
-
           <nav>
-
-            <Nav
+            <NavItem
               to="/"
               icon={Home}
               label="HOME"
-              close={() =>
-                setOpen(false)
-              }
+              close={() => setOpen(false)}
             />
 
-            {cats.map(
-              (category, index) => (
-                <Nav
-                  key={category[0]}
-                  to={
-                    "/docs/" +
-                    category[0]
-                  }
-                  icon={category[2]}
-                  label={category[1]}
-                  n={
-                    "0" +
-                    (index + 1)
-                  }
-                  close={() =>
-                    setOpen(false)
-                  }
+            {CATEGORIES.map(
+              ([id, label, Icon]) => (
+                <NavItem
+                  key={id}
+                  to={`/docs/${id}`}
+                  icon={Icon}
+                  label={label}
+                  close={() => setOpen(false)}
                 />
               )
             )}
 
-            <Nav
+            <NavItem
               to="/dashboard"
               icon={User}
               label="MEMBER"
-              close={() =>
-                setOpen(false)
-              }
+              close={() => setOpen(false)}
             />
-
           </nav>
 
-
-          {/* SIDEBAR BOTTOM */}
-
           <div className="sidebottom">
-
             {user ? (
               <button
                 onClick={() =>
@@ -363,40 +251,29 @@ function Shell({ children }) {
                 LOGOUT
               </button>
             ) : (
-              <Link to="/register">
+              <Link
+                to="/register"
+                onClick={() => setOpen(false)}
+              >
                 <UserPlus size={16} />
                 DAFTAR
               </Link>
             )}
-
           </div>
-
         </aside>
 
-
-        {/* OVERLAY */}
-
+        {/* MOBILE OVERLAY */}
         {open && (
           <div
             className="overlay"
-            onClick={() =>
-              setOpen(false)
-            }
+            onClick={() => setOpen(false)}
           />
         )}
 
-
-        {/* CONTENT */}
-
-        <main>
-          {children}
-        </main>
-
+        <main>{children}</main>
       </div>
 
-
-      {/* FLOATING WHATSAPP / BOT */}
-
+      {/* FLOATING BOT */}
       <a
         className="float"
         href="https://wa.me/6287776581216"
@@ -404,33 +281,31 @@ function Shell({ children }) {
         rel="noreferrer"
         aria-label="WhatsApp"
       >
-        <Bot />
+        <span>W</span>
         <em />
       </a>
     </>
   );
 }
 
-
 /* =========================================================
-   ENDPOINT CARD
+   API CARD
 ========================================================= */
 
-function Card({ e }) {
+function ApiCard({ endpoint }) {
   return (
     <article className="card">
-
       <div className="cardtop">
 
         <span className="method">
-          {e.method}
+          {endpoint.method}
         </span>
 
         <div>
-          <h3>{e.name}</h3>
+          <h3>{endpoint.name}</h3>
 
           <code>
-            {e.path}
+            {endpoint.path}
           </code>
         </div>
 
@@ -438,60 +313,60 @@ function Card({ e }) {
           className="open"
           to={
             "/endpoint?path=" +
-            encodeURIComponent(e.path)
+            encodeURIComponent(
+              endpoint.path
+            )
           }
         >
           OPEN
-
           <ArrowUpRight size={15} />
         </Link>
-
       </div>
 
       <div className="desc">
         API endpoint DINSTORE.
       </div>
-
     </article>
   );
 }
-
 
 /* =========================================================
    HOME
 ========================================================= */
 
-function Home() {
-  const [q, setQ] = useState("");
-  const [f, setF] = useState("all");
+function HomePage() {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
 
-  const list = useMemo(() => {
-    return eps.filter((e) => {
-      const categoryMatch =
-        f === "all" ||
-        e.cat === f;
+  const filteredEndpoints = useMemo(() => {
+    const keyword =
+      search.trim().toLowerCase();
 
-      const searchMatch =
-        `${e.name} ${e.path}`
-          .toLowerCase()
-          .includes(
-            q.toLowerCase()
-          );
+    return ENDPOINTS.filter(
+      (endpoint) => {
+        const categoryMatch =
+          filter === "all" ||
+          endpoint.cat === filter;
 
-      return (
-        categoryMatch &&
-        searchMatch
-      );
-    });
-  }, [q, f]);
+        const searchMatch =
+          !keyword ||
+          `${endpoint.name} ${endpoint.path}`
+            .toLowerCase()
+            .includes(keyword);
+
+        return (
+          categoryMatch &&
+          searchMatch
+        );
+      }
+    );
+  }, [search, filter]);
 
   return (
     <div className="page">
 
       {/* HERO */}
-
       <section className="hero">
-
         <div className="terminal">
           ● TERMINAL ACTIVE
         </div>
@@ -502,200 +377,176 @@ function Home() {
         </h1>
 
         <p>
-          A comprehensive and user
-          friendly API solution for
-          modern applications.
+          API modern untuk aplikasi,
+          automation, downloader, tools
+          dan AI dengan akses member.
         </p>
-
       </section>
 
-
       {/* STATS */}
-
       <section className="stats">
 
         <div>
-          <small>
-            CATEGORIES
-          </small>
-
-          <b>5</b>
+          <small>CATEGORIES</small>
+          <b>{CATEGORIES.length}</b>
         </div>
 
         <div>
-          <small>
-            ENDPOINTS
-          </small>
-
+          <small>ENDPOINTS</small>
           <b className="green">
-            18+
+            {ENDPOINTS.length}+
           </b>
         </div>
 
         <div className="full">
-          <small>
-            STATUS
-          </small>
-
-          <b>
+          <small>STATUS</small>
+          <b className="green">
             ONLINE
           </b>
         </div>
 
       </section>
 
-
-      {/* API KEY NOTICE */}
-
+      {/* MEMBER NOTICE */}
       <div className="notice">
-
         <KeyRound />
 
         <span>
           Login untuk mendapatkan{" "}
-          <b>API KEY</b>{" "}
-          member dan mengakses
-          endpoint.
+          <b>API KEY</b> member.
         </span>
 
         <Link to="/login">
           LOGIN →
         </Link>
-
       </div>
 
-
       {/* SEARCH */}
-
       <div className="search">
-
         <Search />
 
         <input
-          value={q}
+          value={search}
           onChange={(e) =>
-            setQ(e.target.value)
+            setSearch(e.target.value)
           }
           placeholder="SEARCH ENDPOINT / CATEGORY..."
         />
-
       </div>
 
-
       {/* FILTER */}
-
       <div className="filters">
 
         <button
           className={
-            f === "all"
+            filter === "all"
               ? "sel"
               : ""
           }
           onClick={() =>
-            setF("all")
+            setFilter("all")
           }
         >
-          ALL ({eps.length})
+          ALL ({ENDPOINTS.length})
         </button>
 
-        {cats.map((c) => (
-          <button
-            key={c[0]}
-            className={
-              f === c[0]
-                ? "sel"
-                : ""
-            }
-            onClick={() =>
-              setF(c[0])
-            }
-          >
-            {c[1]}
-          </button>
-        ))}
+        {CATEGORIES.map(
+          ([id, label]) => (
+            <button
+              key={id}
+              className={
+                filter === id
+                  ? "sel"
+                  : ""
+              }
+              onClick={() =>
+                setFilter(id)
+              }
+            >
+              {label}
+            </button>
+          )
+        )}
 
       </div>
 
-
-      {/* ENDPOINT GRID */}
-
+      {/* API GRID */}
       <div className="grid">
-
-        {list.map((e) => (
-          <Card
-            key={e.path}
-            e={e}
-          />
-        ))}
-
+        {filteredEndpoints.map(
+          (endpoint) => (
+            <ApiCard
+              key={endpoint.path}
+              endpoint={endpoint}
+            />
+          )
+        )}
       </div>
+
+      {filteredEndpoints.length === 0 && (
+        <div className="empty">
+          <b>ENDPOINT TIDAK DITEMUKAN</b>
+          <span>
+            Coba gunakan kata kunci lain.
+          </span>
+        </div>
+      )}
 
     </div>
   );
 }
 
-
 /* =========================================================
    DOCUMENTATION
 ========================================================= */
 
-function Docs({ id }) {
+function DocsPage({ id }) {
   const category =
-    cats.find(
-      (x) => x[0] === id
-    ) || cats[0];
+    CATEGORIES.find(
+      ([categoryId]) =>
+        categoryId === id
+    ) || CATEGORIES[0];
 
-  const list =
-    eps.filter(
-      (e) => e.cat === id
+  const endpoints =
+    ENDPOINTS.filter(
+      (endpoint) =>
+        endpoint.cat === id
     );
 
   return (
     <div className="page">
 
       <div className="heading">
+        <small>MODULE</small>
 
-        <div>
+        <h1>
+          {category[1]}
+        </h1>
 
-          <small>
-            MODULE
-          </small>
-
-          <h1>
-            {category[1]}
-          </h1>
-
-          <p>
-            {list.length} endpoints
-          </p>
-
-        </div>
-
+        <p>
+          {endpoints.length} endpoints
+        </p>
       </div>
 
-
       <div className="grid">
-
-        {list.map((e) => (
-          <Card
-            key={e.path}
-            e={e}
-          />
-        ))}
-
+        {endpoints.map(
+          (endpoint) => (
+            <ApiCard
+              key={endpoint.path}
+              endpoint={endpoint}
+            />
+          )
+        )}
       </div>
 
     </div>
   );
 }
 
-
 /* =========================================================
-   AUTH LAYOUT
+   AUTH WRAPPER
 ========================================================= */
 
-function Auth({
+function AuthPage({
   title,
   sub,
   children,
@@ -707,20 +558,17 @@ function Auth({
 
         <div className="brand big">
           <i>D</i>
-          DINSTORE API
+          DINSTORE
+          <b>API</b>
         </div>
 
         <small>
           MEMBER ACCESS
         </small>
 
-        <h1>
-          {title}
-        </h1>
+        <h1>{title}</h1>
 
-        <p>
-          {sub}
-        </p>
+        <p>{sub}</p>
 
         {children}
 
@@ -730,41 +578,48 @@ function Auth({
   );
 }
 
-
 /* =========================================================
    LOGIN
 ========================================================= */
 
-function Login() {
-  const navigate =
-    useNavigate();
+function LoginPage() {
+  const navigate = useNavigate();
 
   const [email, setEmail] =
     useState("");
 
-  const [pw, setPw] =
+  const [password, setPassword] =
     useState("");
 
-  const [err, setErr] =
+  const [error, setError] =
     useState("");
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const [showPassword, setShowPassword] =
+    useState(false);
 
-    setErr("");
+  const [loading, setLoading] =
+    useState(false);
 
-    const {
-      error,
-    } =
+  const handleLogin = async (event) => {
+    event.preventDefault();
+
+    setError("");
+    setLoading(true);
+
+    const { error } =
       await supabase.auth.signInWithPassword(
         {
           email,
-          password: pw,
+          password,
         }
       );
 
+    setLoading(false);
+
     if (error) {
-      setErr(error.message);
+      setError(
+        "Email atau password salah."
+      );
       return;
     }
 
@@ -772,12 +627,11 @@ function Login() {
   };
 
   return (
-    <Auth
+    <AuthPage
       title="LOGIN MEMBER"
       sub="Masuk ke dashboard DINSTORE API."
     >
-
-      <form onSubmit={submit}>
+      <form onSubmit={handleLogin}>
 
         <label>
           Email
@@ -787,47 +641,67 @@ function Login() {
             required
             value={email}
             onChange={(e) =>
-              setEmail(
-                e.target.value
-              )
+              setEmail(e.target.value)
             }
+            placeholder="email@example.com"
           />
         </label>
-
 
         <label>
           Password
 
-          <input
-            type="password"
-            required
-            value={pw}
-            onChange={(e) =>
-              setPw(
-                e.target.value
-              )
-            }
-          />
+          <div className="pass">
+
+            <input
+              type={
+                showPassword
+                  ? "text"
+                  : "password"
+              }
+              required
+              value={password}
+              onChange={(e) =>
+                setPassword(
+                  e.target.value
+                )
+              }
+              placeholder="••••••••"
+            />
+
+            <button
+              type="button"
+              onClick={() =>
+                setShowPassword(
+                  !showPassword
+                )
+              }
+            >
+              {showPassword ? (
+                <EyeOff />
+              ) : (
+                <Eye />
+              )}
+            </button>
+
+          </div>
         </label>
 
-
-        {err && (
+        {error && (
           <div className="error">
-            {err}
+            {error}
           </div>
         )}
 
-
         <button
           className="primary"
-          type="submit"
+          disabled={loading}
         >
-          LOGIN
+          {loading
+            ? "MEMPROSES..."
+            : "LOGIN"}
         </button>
 
-
         <div className="links">
-
           <Link to="/forgot-password">
             Lupa sandi?
           </Link>
@@ -835,107 +709,119 @@ function Login() {
           <Link to="/register">
             Daftar
           </Link>
-
         </div>
 
       </form>
-
-    </Auth>
+    </AuthPage>
   );
 }
-
 
 /* =========================================================
    REGISTER
 ========================================================= */
 
-function Register() {
-  const navigate =
-    useNavigate();
+function RegisterPage() {
+  const navigate = useNavigate();
 
-  const [v, setV] =
-    useState({
-      name: "",
-      email: "",
-      pw: "",
-    });
+  const [form, setForm] = useState({
+    name: "",
+    email: "",
+    password: "",
+  });
 
-  const [token, setToken] =
+  const [turnstileToken, setTurnstileToken] =
     useState("");
 
-  const [err, setErr] =
+  const [error, setError] =
     useState("");
 
-  const [ok, setOk] =
+  const [success, setSuccess] =
     useState("");
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const [loading, setLoading] =
+    useState(false);
 
-    setErr("");
+  const updateForm = (
+    field,
+    value
+  ) => {
+    setForm((previous) => ({
+      ...previous,
+      [field]: value,
+    }));
+  };
 
-    if (TS && !token) {
-      setErr(
+  const handleRegister = async (
+    event
+  ) => {
+    event.preventDefault();
+
+    setError("");
+    setSuccess("");
+
+    if (
+      TURNSTILE_SITE_KEY &&
+      !turnstileToken
+    ) {
+      setError(
         "Selesaikan verifikasi Cloudflare Turnstile."
       );
-
       return;
     }
 
-    const {
-      data,
-      error,
-    } =
-      await supabase.auth.signUp(
-        {
-          email: v.email,
-          password: v.pw,
+    setLoading(true);
 
-          options: {
-            data: {
-              name: v.name,
-            },
+    const { data, error } =
+      await supabase.auth.signUp({
+        email: form.email,
+        password: form.password,
+
+        options: {
+          data: {
+            name: form.name,
           },
-        }
-      );
+        },
+      });
+
+    setLoading(false);
 
     if (error) {
-      setErr(error.message);
+      setError(error.message);
       return;
     }
 
     if (data.session) {
       navigate("/dashboard");
-    } else {
-      setOk(
-        "Akun dibuat. Cek email verifikasi lalu login."
-      );
+      return;
     }
+
+    setSuccess(
+      "Akun berhasil dibuat. Silakan cek email untuk verifikasi."
+    );
   };
 
   return (
-    <Auth
+    <AuthPage
       title="DAFTAR MEMBER"
-      sub="Buat akun baru dan dapatkan API key."
+      sub="Buat akun baru dan dapatkan API key otomatis."
     >
-
-      <form onSubmit={submit}>
+      <form onSubmit={handleRegister}>
 
         <label>
           Nama
 
           <input
             required
-            value={v.name}
+            value={form.name}
             onChange={(e) =>
-              setV({
-                ...v,
-                name: e.target.value,
-              })
+              updateForm(
+                "name",
+                e.target.value
+              )
             }
+            placeholder="Nama kamu"
           />
         </label>
-
 
         <label>
           Email
@@ -943,16 +829,16 @@ function Register() {
           <input
             type="email"
             required
-            value={v.email}
+            value={form.email}
             onChange={(e) =>
-              setV({
-                ...v,
-                email: e.target.value,
-              })
+              updateForm(
+                "email",
+                e.target.value
+              )
             }
+            placeholder="email@example.com"
           />
         </label>
-
 
         <label>
           Password
@@ -961,110 +847,109 @@ function Register() {
             type="password"
             minLength={8}
             required
-            value={v.pw}
+            value={form.password}
             onChange={(e) =>
-              setV({
-                ...v,
-                pw: e.target.value,
-              })
+              updateForm(
+                "password",
+                e.target.value
+              )
             }
+            placeholder="Minimal 8 karakter"
           />
         </label>
 
-
-        {TS && (
+        {TURNSTILE_SITE_KEY && (
           <Turnstile
-            siteKey={TS}
-            onSuccess={setToken}
+            siteKey={TURNSTILE_SITE_KEY}
+            onSuccess={
+              setTurnstileToken
+            }
+            onExpire={() =>
+              setTurnstileToken("")
+            }
           />
         )}
 
-
-        {err && (
+        {error && (
           <div className="error">
-            {err}
+            {error}
           </div>
         )}
 
-
-        {ok && (
+        {success && (
           <div className="ok">
-            {ok}
+            {success}
           </div>
         )}
-
 
         <button
           className="primary"
-          type="submit"
+          disabled={loading}
         >
-          CREATE ACCOUNT
+          {loading
+            ? "MEMBUAT..."
+            : "CREATE ACCOUNT"}
         </button>
 
-
         <div className="links">
-
           <Link to="/login">
             Sudah punya akun?
           </Link>
-
         </div>
 
       </form>
-
-    </Auth>
+    </AuthPage>
   );
 }
-
 
 /* =========================================================
    FORGOT PASSWORD
 ========================================================= */
 
-function Forgot() {
+function ForgotPasswordPage() {
   const [email, setEmail] =
     useState("");
 
-  const [msg, setMsg] =
+  const [message, setMessage] =
     useState("");
 
-  const [err, setErr] =
+  const [error, setError] =
     useState("");
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const handleForgot = async (
+    event
+  ) => {
+    event.preventDefault();
 
-    setErr("");
-    setMsg("");
+    setMessage("");
+    setError("");
 
-    const {
-      error,
-    } =
+    const { error } =
       await supabase.auth.resetPasswordForEmail(
         email,
         {
           redirectTo:
-            location.origin +
+            window.location.origin +
             "/reset-password",
         }
       );
 
     if (error) {
-      setErr(error.message);
-    } else {
-      setMsg(
-        "Link reset password terkirim."
-      );
+      setError(error.message);
+      return;
     }
+
+    setMessage(
+      "Link reset password berhasil dikirim ke email."
+    );
   };
 
   return (
-    <Auth
+    <AuthPage
       title="LUPA PASSWORD"
       sub="Link reset akan dikirim ke email."
     >
-
-      <form onSubmit={submit}>
+      <form onSubmit={handleForgot}>
 
         <label>
           Email
@@ -1074,93 +959,83 @@ function Forgot() {
             required
             value={email}
             onChange={(e) =>
-              setEmail(
-                e.target.value
-              )
+              setEmail(e.target.value)
             }
+            placeholder="email@example.com"
           />
         </label>
 
-
-        {err && (
+        {error && (
           <div className="error">
-            {err}
+            {error}
           </div>
         )}
 
-
-        {msg && (
+        {message && (
           <div className="ok">
-            {msg}
+            {message}
           </div>
         )}
 
-
-        <button
-          className="primary"
-          type="submit"
-        >
+        <button className="primary">
           KIRIM LINK
         </button>
-
 
         <Link
           className="back"
           to="/login"
         >
-          ← Kembali
+          ← Kembali ke login
         </Link>
 
       </form>
-
-    </Auth>
+    </AuthPage>
   );
 }
-
 
 /* =========================================================
    RESET PASSWORD
 ========================================================= */
 
-function Reset() {
-  const [pw, setPw] =
+function ResetPasswordPage() {
+  const [password, setPassword] =
     useState("");
 
-  const [msg, setMsg] =
+  const [message, setMessage] =
     useState("");
 
-  const [err, setErr] =
+  const [error, setError] =
     useState("");
 
-  const submit = async (e) => {
-    e.preventDefault();
+  const handleReset = async (
+    event
+  ) => {
+    event.preventDefault();
 
-    setErr("");
-    setMsg("");
+    setMessage("");
+    setError("");
 
-    const {
-      error,
-    } =
+    const { error } =
       await supabase.auth.updateUser({
-        password: pw,
+        password,
       });
 
     if (error) {
-      setErr(error.message);
-    } else {
-      setMsg(
-        "Password berhasil diubah."
-      );
+      setError(error.message);
+      return;
     }
+
+    setMessage(
+      "Password berhasil diubah."
+    );
   };
 
   return (
-    <Auth
+    <AuthPage
       title="RESET PASSWORD"
       sub="Masukkan password baru."
     >
-
-      <form onSubmit={submit}>
+      <form onSubmit={handleReset}>
 
         <label>
           Password baru
@@ -1169,211 +1044,214 @@ function Reset() {
             type="password"
             minLength={8}
             required
-            value={pw}
+            value={password}
             onChange={(e) =>
-              setPw(
+              setPassword(
                 e.target.value
               )
             }
+            placeholder="Minimal 8 karakter"
           />
         </label>
 
-
-        {err && (
+        {error && (
           <div className="error">
-            {err}
+            {error}
           </div>
         )}
 
-
-        {msg && (
+        {message && (
           <div className="ok">
-            {msg}
+            {message}
           </div>
         )}
 
-
-        <button
-          className="primary"
-          type="submit"
-        >
-          SIMPAN
+        <button className="primary">
+          SIMPAN PASSWORD
         </button>
 
       </form>
-
-    </Auth>
+    </AuthPage>
   );
 }
 
-
 /* =========================================================
-   MEMBER DASHBOARD
+   DASHBOARD
 ========================================================= */
 
-function Dashboard() {
-  const navigate =
-    useNavigate();
+function DashboardPage() {
+  const navigate = useNavigate();
+  const user = useUser();
 
-  const [p, setP] =
+  const [profile, setProfile] =
     useState(null);
 
-  const [key, setKey] =
+  const [error, setError] =
     useState("");
 
-  const [err, setErr] =
-    useState("");
+  const [copied, setCopied] =
+    useState(false);
 
   useEffect(() => {
-    (async () => {
-      const {
-        data,
-      } =
-        await supabase.auth.getSession();
-
-      if (!data.session) {
-        navigate("/login");
-        return;
-      }
-
-      const response =
-        await fetch(
-          API + "/me",
-          {
-            headers: {
-              Authorization:
-                "Bearer " +
-                data.session
-                  .access_token,
-            },
-          }
-        );
-
-      const json =
-        await response.json();
-
-      setP(json.profile);
-    })();
-  }, [navigate]);
-
-  const regen = async () => {
-    setErr("");
-
-    const {
-      data,
-    } =
-      await supabase.auth.getSession();
-
-    if (!data.session) {
+    if (user === null) {
       navigate("/login");
       return;
     }
 
-    const response =
-      await fetch(
-        API + "/keys/regenerate",
-        {
-          method: "POST",
+    if (!user) return;
 
-          headers: {
-            Authorization:
-              "Bearer " +
-              data.session
-                .access_token,
-          },
+    const loadProfile =
+      async () => {
+        const { data, error } =
+          await supabase
+            .from("profiles")
+            .select(
+              "name,email,api_key,status,role,created_at"
+            )
+            .eq("id", user.id)
+            .single();
+
+        if (error) {
+          setError(error.message);
+          return;
         }
-      );
 
-    const json =
-      await response.json();
+        setProfile(data);
+      };
 
-    if (!response.ok) {
-      setErr(
-        json.error ||
-          "Gagal membuat API key."
-      );
+    loadProfile();
+  }, [user, navigate]);
 
-      return;
-    }
+  if (user === undefined) {
+    return (
+      <div className="page">
+        <div className="loading">
+          MEMUAT...
+        </div>
+      </div>
+    );
+  }
 
-    setKey(json.apiKey);
+  if (!user) {
+    return null;
+  }
+
+  const copyApiKey = async () => {
+    if (!profile?.api_key) return;
+
+    await navigator.clipboard.writeText(
+      profile.api_key
+    );
+
+    setCopied(true);
+
+    setTimeout(
+      () => setCopied(false),
+      1500
+    );
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
   };
 
   return (
     <div className="page">
 
-      <small>
-        MEMBER PANEL
-      </small>
+      <small>MEMBER PANEL</small>
 
-      <h1>
-        Dashboard
-      </h1>
+      <h1>Dashboard</h1>
 
-      <p>
-        {p?.email}
+      <p className="muted">
+        {profile?.email}
       </p>
-
 
       <div className="dash">
 
         <div>
           <small>NAMA</small>
-
           <b>
-            {p?.name || "-"}
+            {profile?.name || "-"}
           </b>
         </div>
-
 
         <div>
           <small>STATUS</small>
-
           <b className="green">
-            {p?.status || "active"}
+            {profile?.status ||
+              "active"}
           </b>
         </div>
 
+        <div>
+          <small>ROLE</small>
+          <b>
+            {profile?.role ||
+              "member"}
+          </b>
+        </div>
+
+        <div>
+          <small>JOINED</small>
+          <b>
+            {profile?.created_at
+              ? new Date(
+                  profile.created_at
+                ).toLocaleDateString(
+                  "id-ID"
+                )
+              : "-"}
+          </b>
+        </div>
 
         <div className="key">
 
           <small>
-            API KEY BARU
+            API KEY MEMBER
           </small>
 
           <code>
-            {key ||
-              "••••••••••••••••••••"}
+            {profile?.api_key ||
+              "API KEY BELUM TERSEDIA"}
           </code>
 
           <button
-            onClick={regen}
+            onClick={copyApiKey}
           >
-            <RefreshCw size={16} />
+            {copied ? (
+              <Check size={16} />
+            ) : (
+              <Copy size={16} />
+            )}
 
-            GENERATE / REGENERATE
+            {copied
+              ? "COPIED"
+              : "COPY KEY"}
           </button>
 
         </div>
 
       </div>
 
-
-      {err && (
+      {error && (
         <div className="error">
-          {err}
+          {error}
         </div>
       )}
 
-
       <div className="security">
 
-        <Terminal size={18} />
+        <LockKeyhole size={18} />
 
-        API key dibuat dan
-        diverifikasi di backend.
-        Service-role key tidak
-        pernah dikirim ke browser.
+        <span>
+          API key dibuat otomatis
+          oleh database.
+        </span>
+
+        <button onClick={logout}>
+          LOGOUT
+        </button>
 
       </div>
 
@@ -1381,31 +1259,36 @@ function Dashboard() {
   );
 }
 
-
 /* =========================================================
    ENDPOINT DETAIL
 ========================================================= */
 
-function Endpoint() {
+function EndpointPage() {
   const location =
     useLocation();
 
-  const params =
+  const path =
     new URLSearchParams(
       location.search
-    );
-
-  const path =
-    params.get("path") ||
+    ).get("path") ||
     "/api/health";
+
+  const endpoint =
+    ENDPOINTS.find(
+      (item) =>
+        item.path === path
+    );
 
   const [copied, setCopied] =
     useState(false);
 
-  const copy = () => {
-    navigator.clipboard.writeText(
-      window.location.origin +
-        path
+  const url =
+    window.location.origin +
+    path;
+
+  const copyUrl = async () => {
+    await navigator.clipboard.writeText(
+      url
     );
 
     setCopied(true);
@@ -1416,18 +1299,12 @@ function Endpoint() {
     );
   };
 
-  const endpoint =
-    eps.find(
-      (e) => e.path === path
-    );
-
   return (
     <div className="page">
 
       <small>
         DOCUMENTATION / ENDPOINT
       </small>
-
 
       <div className="detail">
 
@@ -1438,39 +1315,29 @@ function Endpoint() {
           </span>
 
           <div>
-
             <h1>
               {endpoint?.name ||
                 "API Endpoint"}
             </h1>
 
-            <code>
-              {path}
-            </code>
-
+            <code>{path}</code>
           </div>
 
         </div>
 
-
         <p>
           Endpoint DINSTORE API.
-          Gunakan API key member
-          bila endpoint
-          memerlukannya.
+          Gunakan API key member jika
+          endpoint memerlukannya.
         </p>
-
 
         <div className="code">
 
-          <span>
-            {window.location.origin +
-              path}
-          </span>
+          <span>{url}</span>
 
           <button
-            onClick={copy}
-            aria-label="Copy endpoint"
+            onClick={copyUrl}
+            aria-label="Copy URL"
           >
             {copied ? (
               <Check />
@@ -1487,7 +1354,6 @@ function Endpoint() {
   );
 }
 
-
 /* =========================================================
    APP
 ========================================================= */
@@ -1500,55 +1366,60 @@ export default function App() {
 
         <Route
           path="/"
-          element={<Home />}
+          element={<HomePage />}
         />
 
-        {cats.map((c) => (
-          <Route
-            key={c[0]}
-            path={
-              "/docs/" +
-              c[0]
-            }
-            element={
-              <Docs id={c[0]} />
-            }
-          />
-        ))}
+        {CATEGORIES.map(
+          ([id]) => (
+            <Route
+              key={id}
+              path={`/docs/${id}`}
+              element={
+                <DocsPage id={id} />
+              }
+            />
+          )
+        )}
 
         <Route
           path="/endpoint"
-          element={<Endpoint />}
+          element={<EndpointPage />}
         />
 
         <Route
           path="/login"
-          element={<Login />}
+          element={<LoginPage />}
         />
 
         <Route
           path="/register"
-          element={<Register />}
+          element={<RegisterPage />}
         />
 
         <Route
           path="/forgot-password"
-          element={<Forgot />}
+          element={
+            <ForgotPasswordPage />
+          }
         />
 
         <Route
           path="/reset-password"
-          element={<Reset />}
+          element={
+            <ResetPasswordPage />
+          }
         />
 
         <Route
           path="/dashboard"
-          element={<Dashboard />}
+          element={
+            <DashboardPage />
+          }
         />
 
         <Route
           path="*"
-          element={<Home />}
+          element={<HomePage />}
         />
 
       </Routes>
