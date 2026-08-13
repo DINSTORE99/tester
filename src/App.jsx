@@ -1,47 +1,49 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
+import "./style.css";
 
 /* =========================================================
-   DIN API 3.0.0
-   ROBOT / TRANSFORMER 3D DOCUMENTATION
+   CONFIG
+========================================================= */
+
+const TURNSTILE_SITE_KEY =
+  import.meta.env.VITE_TURNSTILE_SITE_KEY || "0x4AAAAAAEPIh3nGXRyGDzYt";
+
+/* =========================================================
+   API DATA
 ========================================================= */
 
 const API_CATEGORIES = [
-  /* =========================
-     AI
-  ========================= */
-
   {
     name: "AI",
     icon: "✦",
-    color: "green",
+    color: "mint",
     path: "/docs/ai",
     endpoints: [
       {
         name: "AI Aiko",
         method: "GET",
         path: "/api/ai/aiko",
-        description: "AI chat assistant",
+        description: "AI chat assistant.",
         params: [
           {
             name: "q",
             label: "Prompt",
-            placeholder: "tes",
+            placeholder: "Halo, apa kabar?",
             required: true,
           },
           {
             name: "reset",
             label: "Reset",
-            placeholder: "oke",
+            placeholder: "false",
             required: false,
           },
         ],
       },
-
       {
         name: "AI Lyrics Generator",
         method: "GET",
         path: "/api/ai/lyricsgen",
-        description: "Generate lyrics menggunakan AI",
+        description: "Generate lyrics menggunakan AI.",
         params: [
           {
             name: "theme",
@@ -69,12 +71,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "AI Coder",
         method: "GET",
         path: "/api/tools/aicoder",
-        description: "Generate kode menggunakan AI",
+        description: "Generate source code menggunakan AI.",
         params: [
           {
             name: "prompt",
@@ -84,27 +85,22 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
-        name: "AI4Chat",
+        name: "AI Chat",
         method: "GET",
-        path: "/api/ai/ai4chat",
-        description: "AI chat generation",
+        path: "/api/ai/chat",
+        description: "General AI chat endpoint.",
         params: [
           {
             name: "q",
             label: "Question",
-            placeholder: "Halo",
+            placeholder: "Jelaskan JavaScript",
             required: true,
           },
         ],
       },
     ],
   },
-
-  /* =========================
-     ADMIN
-  ========================= */
 
   {
     name: "ADMIN",
@@ -116,29 +112,25 @@ const API_CATEGORIES = [
         name: "Admin Status",
         method: "GET",
         path: "/api/admin/status",
-        description: "Check admin status",
+        description: "Check API admin status.",
         params: [],
       },
       {
         name: "Admin Info",
         method: "GET",
         path: "/api/admin/info",
-        description: "Get admin information",
+        description: "Get admin information.",
         params: [],
       },
       {
         name: "Server Status",
         method: "GET",
         path: "/api/admin/server",
-        description: "Check server information",
+        description: "Check server status.",
         params: [],
       },
     ],
   },
-
-  /* =========================
-     CACHE
-  ========================= */
 
   {
     name: "CACHE",
@@ -150,7 +142,7 @@ const API_CATEGORIES = [
         name: "Cache Get",
         method: "GET",
         path: "/api/cache/get",
-        description: "Get cached data",
+        description: "Get cached data.",
         params: [
           {
             name: "key",
@@ -164,15 +156,11 @@ const API_CATEGORIES = [
         name: "Cache Clear",
         method: "GET",
         path: "/api/cache/clear",
-        description: "Clear cache",
+        description: "Clear cache.",
         params: [],
       },
     ],
   },
-
-  /* =========================
-     DOWNLOAD
-  ========================= */
 
   {
     name: "DOWNLOAD",
@@ -184,7 +172,7 @@ const API_CATEGORIES = [
         name: "TikTok Downloader",
         method: "GET",
         path: "/api/tiktok",
-        description: "Download video TikTok",
+        description: "Download video TikTok.",
         params: [
           {
             name: "url",
@@ -194,12 +182,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Instagram Downloader",
         method: "GET",
         path: "/api/instagram",
-        description: "Download media Instagram",
+        description: "Download Instagram media.",
         params: [
           {
             name: "url",
@@ -209,12 +196,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "CapCut Downloader",
         method: "GET",
-        path: "/api/download/capcut",
-        description: "Download CapCut",
+        path: "/api/d/capcut",
+        description: "Download CapCut media.",
         params: [
           {
             name: "url",
@@ -224,12 +210,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Facebook Downloader",
         method: "GET",
         path: "/api/download/facebook",
-        description: "Download Facebook media",
+        description: "Download Facebook media.",
         params: [
           {
             name: "url",
@@ -239,12 +224,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "MediaFire Downloader",
         method: "GET",
         path: "/api/download/mediafire",
-        description: "Download MediaFire",
+        description: "Download MediaFire files.",
         params: [
           {
             name: "url",
@@ -254,73 +238,68 @@ const API_CATEGORIES = [
           },
         ],
       },
+      {
+        name: "Pinterest Downloader",
+        method: "GET",
+        path: "/api/download/pinterest",
+        description: "Download Pinterest media.",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://pinterest.com/...",
+            required: true,
+          },
+        ],
+      },
     ],
   },
 
-  /* =========================
-     FUN
-  ========================= */
-
   {
     name: "FUN",
-    icon: "♣",
+    icon: "🎮",
     color: "pink",
     path: "/docs/fun",
     endpoints: [
       {
-        name: "Random Joke",
-        method: "GET",
-        path: "/api/fun/joke",
-        description: "Generate random joke",
-        params: [],
-      },
-      {
         name: "Truth",
         method: "GET",
         path: "/api/fun/truth",
-        description: "Random truth question",
+        description: "Random truth question.",
         params: [],
       },
       {
         name: "Dare",
         method: "GET",
         path: "/api/fun/dare",
-        description: "Random dare",
+        description: "Random dare challenge.",
         params: [],
       },
       {
-        name: "Quotes",
+        name: "Joke",
         method: "GET",
-        path: "/api/fun/quotes",
-        description: "Random quotes",
+        path: "/api/fun/joke",
+        description: "Generate random joke.",
         params: [],
       },
     ],
   },
 
-  /* =========================
-     LEADERBOARD
-  ========================= */
-
   {
     name: "LEADERBOARD",
-    icon: "♛",
-    color: "gold",
+    icon: "🏆",
+    color: "yellow",
     path: "/docs/leaderboard",
     endpoints: [
       {
         name: "Leaderboard",
         method: "GET",
         path: "/api/leaderboard",
-        description: "Get leaderboard data",
+        description: "Get leaderboard data.",
         params: [],
       },
     ],
   },
-
-  /* =========================
-     LIBRARY
-  ========================= */
 
   {
     name: "LIBRARY",
@@ -329,22 +308,43 @@ const API_CATEGORIES = [
     path: "/docs/library",
     endpoints: [
       {
-        name: "Library List",
+        name: "Books",
         method: "GET",
-        path: "/api/library",
-        description: "Get library information",
-        params: [],
-      },
-      {
-        name: "Library Search",
-        method: "GET",
-        path: "/api/library/search",
-        description: "Search library",
+        path: "/api/library/books",
+        description: "Search library books.",
         params: [
           {
             name: "q",
-            label: "Search",
-            placeholder: "keyword",
+            label: "Query",
+            placeholder: "javascript",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Anime",
+        method: "GET",
+        path: "/api/library/anime",
+        description: "Search anime library.",
+        params: [
+          {
+            name: "q",
+            label: "Query",
+            placeholder: "naruto",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Movies",
+        method: "GET",
+        path: "/api/library/movies",
+        description: "Search movie library.",
+        params: [
+          {
+            name: "q",
+            label: "Query",
+            placeholder: "avengers",
             required: true,
           },
         ],
@@ -352,56 +352,36 @@ const API_CATEGORIES = [
     ],
   },
 
-  /* =========================
-     MAKER
-  ========================= */
-
   {
     name: "MAKER",
-    icon: "✣",
-    color: "pink",
+    icon: "🎨",
+    color: "purple",
     path: "/docs/maker",
     endpoints: [
       {
-        name: "Text Maker",
+        name: "QR Maker",
         method: "GET",
-        path: "/api/maker/text",
-        description: "Create styled text",
+        path: "/api/maker/qr",
+        description: "Generate QR code.",
         params: [
           {
             name: "text",
             label: "Text",
-            placeholder: "Hello",
+            placeholder: "Hello World",
             required: true,
           },
         ],
       },
-
-      {
-        name: "Sticker Maker",
-        method: "GET",
-        path: "/api/maker/sticker",
-        description: "Create sticker",
-        params: [
-          {
-            name: "url",
-            label: "Image URL",
-            placeholder: "https://...",
-            required: true,
-          },
-        ],
-      },
-
       {
         name: "Logo Maker",
         method: "GET",
         path: "/api/maker/logo",
-        description: "Generate logo",
+        description: "Generate logo.",
         params: [
           {
             name: "text",
             label: "Text",
-            placeholder: "ZEL",
+            placeholder: "DINSTORE",
             required: true,
           },
         ],
@@ -409,13 +389,9 @@ const API_CATEGORIES = [
     ],
   },
 
-  /* =========================
-     NEWS
-  ========================= */
-
   {
     name: "NEWS",
-    icon: "▥",
+    icon: "▤",
     color: "cyan",
     path: "/docs/news",
     endpoints: [
@@ -423,19 +399,18 @@ const API_CATEGORIES = [
         name: "Latest News",
         method: "GET",
         path: "/api/news/latest",
-        description: "Get latest news",
+        description: "Get latest news.",
         params: [],
       },
-
       {
         name: "Search News",
         method: "GET",
         path: "/api/news/search",
-        description: "Search news",
+        description: "Search news.",
         params: [
           {
             name: "q",
-            label: "Keyword",
+            label: "Query",
             placeholder: "teknologi",
             required: true,
           },
@@ -444,29 +419,24 @@ const API_CATEGORIES = [
     ],
   },
 
-  /* =========================
-     RANDOM
-  ========================= */
-
   {
     name: "RANDOM",
     icon: "◆",
-    color: "purple",
+    color: "violet",
     path: "/docs/random",
     endpoints: [
       {
         name: "Random Image",
         method: "GET",
         path: "/api/random/image",
-        description: "Get random image",
+        description: "Get random image.",
         params: [],
       },
-
       {
         name: "Random Number",
         method: "GET",
         path: "/api/random/number",
-        description: "Generate random number",
+        description: "Generate random number.",
         params: [
           {
             name: "min",
@@ -485,10 +455,6 @@ const API_CATEGORIES = [
     ],
   },
 
-  /* =========================
-     SEARCH
-  ========================= */
-
   {
     name: "SEARCH",
     icon: "⌕",
@@ -496,30 +462,29 @@ const API_CATEGORIES = [
     path: "/docs/search",
     endpoints: [
       {
-        name: "Web Search",
+        name: "Google Search",
         method: "GET",
-        path: "/api/search/web",
-        description: "Search information from web",
+        path: "/api/search/google",
+        description: "Search Google.",
         params: [
           {
             name: "q",
             label: "Query",
-            placeholder: "OpenAI",
+            placeholder: "DINSTORE API",
             required: true,
           },
         ],
       },
-
       {
-        name: "Image Search",
+        name: "YouTube Search",
         method: "GET",
-        path: "/api/search/image",
-        description: "Search images",
+        path: "/api/search/youtube",
+        description: "Search YouTube.",
         params: [
           {
             name: "q",
             label: "Query",
-            placeholder: "robot",
+            placeholder: "music",
             required: true,
           },
         ],
@@ -527,21 +492,17 @@ const API_CATEGORIES = [
     ],
   },
 
-  /* =========================
-     STALK
-  ========================= */
-
   {
     name: "STALK",
     icon: "◉",
-    color: "purple",
+    color: "pink",
     path: "/docs/stalk",
     endpoints: [
       {
         name: "TikTok Stalk",
         method: "GET",
         path: "/api/stalk/tiktok",
-        description: "Get public TikTok profile information",
+        description: "Get public TikTok profile information.",
         params: [
           {
             name: "username",
@@ -551,12 +512,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Instagram Stalk",
         method: "GET",
         path: "/api/stalk/instagram",
-        description: "Get public Instagram profile information",
+        description: "Get public Instagram profile information.",
         params: [
           {
             name: "username",
@@ -568,10 +528,6 @@ const API_CATEGORIES = [
       },
     ],
   },
-
-  /* =========================
-     TOOLS
-  ========================= */
 
   {
     name: "TOOLS",
@@ -583,22 +539,21 @@ const API_CATEGORIES = [
         name: "Domain Info",
         method: "GET",
         path: "/api/tools/domaininfo",
-        description: "Check domain information",
+        description: "Check domain information.",
         params: [
           {
             name: "domain",
             label: "Domain",
-            placeholder: "dinns.my.id",
+            placeholder: "example.com",
             required: true,
           },
         ],
       },
-
       {
         name: "QR Generator",
         method: "GET",
         path: "/api/tools/qr",
-        description: "Generate QR code",
+        description: "Generate QR code.",
         params: [
           {
             name: "text",
@@ -608,12 +563,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Short URL",
         method: "GET",
         path: "/api/tools/shorturl",
-        description: "Shorten URL",
+        description: "Shorten URL.",
         params: [
           {
             name: "url",
@@ -628,32 +582,46 @@ const API_CATEGORIES = [
 ];
 
 /* =========================================================
-   ICON
-========================================================= */
-
-function RobotIcon() {
-  return (
-    <div className="robot-icon">
-      <span className="robot-eye left" />
-      <span className="robot-eye right" />
-      <span className="robot-mouth" />
-    </div>
-  );
-}
-
-/* =========================================================
    APP
 ========================================================= */
 
 export default function App() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [search, setSearch] = useState("");
-  const [openCategory, setOpenCategory] = useState("AI");
+  const [openCategory, setOpenCategory] = useState(null);
+  const [turnstileReady, setTurnstileReady] = useState(false);
 
   const totalEndpoints = API_CATEGORIES.reduce(
     (total, category) => total + category.endpoints.length,
     0
   );
+
+  /* Load Cloudflare Turnstile */
+
+  useEffect(() => {
+    if (window.turnstile) {
+      setTurnstileReady(true);
+      return;
+    }
+
+    const script = document.createElement("script");
+
+    script.src =
+      "https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit";
+
+    script.async = true;
+    script.defer = true;
+
+    script.onload = () => {
+      setTurnstileReady(true);
+    };
+
+    document.head.appendChild(script);
+
+    return () => {
+      script.remove();
+    };
+  }, []);
 
   const filteredCategories = useMemo(() => {
     const keyword = search.trim().toLowerCase();
@@ -685,7 +653,7 @@ export default function App() {
           return category;
         }
 
-        if (endpoints.length > 0) {
+        if (endpoints.length) {
           return {
             ...category,
             endpoints,
@@ -697,16 +665,7 @@ export default function App() {
       .filter(Boolean);
   }, [search]);
 
-  const scrollHome = () => {
-    setMenuOpen(false);
-
-    window.scrollTo({
-      top: 0,
-      behavior: "smooth",
-    });
-  };
-
-  const scrollCategory = (name) => {
+  const scrollToCategory = (name) => {
     setMenuOpen(false);
 
     setTimeout(() => {
@@ -714,42 +673,44 @@ export default function App() {
         `category-${name.toLowerCase()}`
       );
 
-      if (element) {
-        element.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
+      element?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    }, 150);
+  };
 
-        setOpenCategory(name);
-      }
-    }, 200);
+  const openWhatsApp = () => {
+    window.open(
+      "https://wa.me/6287776581216",
+      "_blank",
+      "noopener,noreferrer"
+    );
   };
 
   return (
     <div className="app">
 
-      {/* =================================================
-          BACKGROUND
-      ================================================= */}
+      {/* BACKGROUND GRID */}
 
-      <div className="background-grid" />
-      <div className="scanlines" />
+      <div className="grid-background" />
 
-      <div className="ambient ambient-one" />
-      <div className="ambient ambient-two" />
+      {/* ROBOT */}
 
-      {/* =================================================
-          HEADER
-      ================================================= */}
+      <div className="robot-decoration robot-one">
+        <span />
+        <span />
+        <span />
+      </div>
+
+      {/* HEADER */}
 
       <header className="header">
 
-        <div className="header-left">
+        <div className="header-inner">
 
           <button
-            className={`menu-button ${
-              menuOpen ? "active" : ""
-            }`}
+            className="menu-button"
             onClick={() => setMenuOpen(true)}
           >
             <span />
@@ -757,35 +718,27 @@ export default function App() {
             <span />
           </button>
 
-          <div className="header-brand">
-            <RobotIcon />
+          <div className="brand">
+            <div className="brand-core">
+              D
+            </div>
 
             <div>
-              <strong>DIN API🔥</strong>
-              <small>ROBOT SYSTEM</small>
+              <strong>DINSTORE</strong>
+              <small>API SYSTEM</small>
             </div>
           </div>
 
-        </div>
-
-        <div className="header-right">
-
-          <div className="connection">
+          <div className="header-status">
             <span />
             ONLINE
-          </div>
-
-          <div className="version">
-            v1.0.0
           </div>
 
         </div>
 
       </header>
 
-      {/* =================================================
-          NAV OVERLAY
-      ================================================= */}
+      {/* SIDEBAR */}
 
       <div
         className={`nav-overlay ${
@@ -794,21 +747,20 @@ export default function App() {
         onClick={() => setMenuOpen(false)}
       />
 
-      {/* =================================================
-          SIDE NAV
-      ================================================= */}
-
       <aside
         className={`side-nav ${
           menuOpen ? "open" : ""
         }`}
       >
 
-        <div className="side-top">
+        <div className="side-nav-header">
 
           <div>
-            <small>NAVIGATION</small>
-            <h2>DIN API🔥</h2>
+            <span className="nav-label">
+              NAVIGATION
+            </span>
+
+            <h2>DINSTORE API</h2>
           </div>
 
           <button
@@ -820,39 +772,41 @@ export default function App() {
 
         </div>
 
-        <div className="side-line" />
-
-        <nav className="nav-list">
+        <div className="nav-items">
 
           <button
             className="nav-item home"
-            onClick={scrollHome}
+            onClick={() => {
+              setMenuOpen(false);
+
+              window.scrollTo({
+                top: 0,
+                behavior: "smooth",
+              });
+            }}
           >
-            <span className="nav-icon">⌂</span>
-
+            <span>⌂</span>
             <b>HOME</b>
-
-            <small>00</small>
           </button>
 
           {API_CATEGORIES.map(
             (category, index) => (
               <button
-                key={category.name}
                 className="nav-item"
+                key={category.name}
                 onClick={() =>
-                  scrollCategory(
+                  scrollToCategory(
                     category.name
                   )
                 }
               >
-                <span
-                  className={`nav-icon ${category.color}`}
-                >
+                <span>
                   {category.icon}
                 </span>
 
-                <b>{category.name}</b>
+                <b>
+                  {category.name}
+                </b>
 
                 <small>
                   {String(index + 1).padStart(
@@ -864,91 +818,83 @@ export default function App() {
             )
           )}
 
-        </nav>
-
-        <div className="side-footer">
-          <span>SYSTEM STATUS</span>
-          <strong>● OPERATIONAL</strong>
         </div>
 
       </aside>
 
-      {/* =================================================
-          MAIN
-      ================================================= */}
+      {/* MAIN */}
 
       <main className="main">
 
-        {/* =================================================
-            HERO
-        ================================================= */}
+        {/* HERO */}
 
         <section className="hero">
 
-          <div className="hero-robot-decoration">
-            <div className="robot-head">
-              <div className="robot-eye left" />
-              <div className="robot-eye right" />
-              <div className="robot-mouth" />
+          <div className="hero-machine">
+
+            <div className="machine-ring" />
+
+            <div className="machine-core">
+              <div className="eye eye-left" />
+              <div className="eye eye-right" />
+              <div className="machine-mouth" />
             </div>
+
           </div>
 
-          <div className="hero-content">
+          <div className="terminal-badge">
+            <span />
+            TERMINAL ACTIVE
+          </div>
 
-            <div className="terminal">
+          <div className="hero-title">
 
-              <span className="terminal-light" />
+            <h1>DINSTORE</h1>
 
-              TERMINAL ACTIVE
+            <span>3.0.0</span>
 
-              <span className="terminal-lines">
-                /// SYSTEM READY
+          </div>
+
+          <p className="hero-description">
+            A comprehensive and user friendly API
+            solution for modern applications.
+          </p>
+
+          <div className="stats">
+
+            <div className="stat">
+
+              <span>
+                CATEGORIES
               </span>
 
-            </div>
-
-            <div className="hero-title">
-
-              <h1>DOCS</h1>
-
-              <span>v3.0.0</span>
+              <strong>
+                {API_CATEGORIES.length}
+              </strong>
 
             </div>
 
-            <p>
-              A comprehensive and user friendly API
-              solution for modern applications.
-            </p>
+            <div className="stat green">
 
-            <div className="hero-system">
+              <span>
+                ENDPOINTS
+              </span>
 
-              <div className="system-item">
+              <strong>
+                {totalEndpoints}
+              </strong>
 
-                <span>CATEGORIES</span>
+            </div>
 
-                <strong>
-                  {API_CATEGORIES.length}
-                </strong>
+            <div className="stat status">
 
-              </div>
+              <span>
+                STATUS
+              </span>
 
-              <div className="system-item active">
-
-                <span>ENDPOINTS</span>
-
-                <strong>
-                  {totalEndpoints}
-                </strong>
-
-              </div>
-
-              <div className="system-item">
-
-                <span>STATUS</span>
-
-                <strong>ONLINE</strong>
-
-              </div>
+              <strong>
+                ONLINE
+              </strong>
 
             </div>
 
@@ -956,15 +902,13 @@ export default function App() {
 
         </section>
 
-        {/* =================================================
-            SEARCH
-        ================================================= */}
+        {/* SEARCH */}
 
         <section className="search-section">
 
           <div className="search-box">
 
-            <span className="search-icon">
+            <span>
               ⌕
             </span>
 
@@ -978,7 +922,6 @@ export default function App() {
 
             {search && (
               <button
-                className="clear-search"
                 onClick={() =>
                   setSearch("")
                 }
@@ -987,17 +930,11 @@ export default function App() {
               </button>
             )}
 
-            <span className="search-status">
-              SEARCH
-            </span>
-
           </div>
 
         </section>
 
-        {/* =================================================
-            CATEGORY GRID
-        ================================================= */}
+        {/* CATEGORIES */}
 
         <section className="categories">
 
@@ -1019,8 +956,6 @@ export default function App() {
                   }`}
                 >
 
-                  {/* CATEGORY TOP */}
-
                   <button
                     className="category-top"
                     onClick={() =>
@@ -1040,51 +975,48 @@ export default function App() {
 
                     <div className="category-info">
 
-                      <div className="category-index">
+                      <small>
                         MODULE{" "}
-                        {String(index + 1).padStart(
+                        {String(
+                          index + 1
+                        ).padStart(
                           2,
                           "0"
                         )}
-                      </div>
+                      </small>
 
                       <h2>
                         {category.name}
                       </h2>
 
                       <span>
-                        {category.endpoints.length}{" "}
+                        {
+                          category
+                            .endpoints
+                            .length
+                        }{" "}
                         ENDPOINTS
                       </span>
 
                     </div>
 
-                    <div className="category-right">
-
-                      <span className="open-label">
-                        {isOpen
-                          ? "CLOSE"
-                          : "OPEN"}
-                      </span>
-
-                      <span className="category-arrow">
-                        {isOpen
-                          ? "↑"
-                          : "↓"}
-                      </span>
-
-                    </div>
+                    <span className="open-label">
+                      {isOpen
+                        ? "CLOSE ↑"
+                        : "OPEN →"}
+                    </span>
 
                   </button>
 
-                  {/* PATH */}
-
                   <div className="category-path">
-                    <span>PATH</span>
-                    {category.path}
-                  </div>
 
-                  {/* ENDPOINTS */}
+                    <span>
+                      PATH
+                    </span>
+
+                    {category.path}
+
+                  </div>
 
                   <div
                     className={`endpoint-list ${
@@ -1097,8 +1029,15 @@ export default function App() {
                     {category.endpoints.map(
                       (endpoint) => (
                         <EndpointCard
-                          endpoint={endpoint}
-                          key={endpoint.path}
+                          key={
+                            endpoint.path
+                          }
+                          endpoint={
+                            endpoint
+                          }
+                          turnstileReady={
+                            turnstileReady
+                          }
                         />
                       )
                     )}
@@ -1110,62 +1049,46 @@ export default function App() {
             }
           )}
 
-          {filteredCategories.length ===
-            0 && (
+          {!filteredCategories.length && (
             <div className="empty">
-              <RobotIcon />
-
               <strong>
-                MODULE NOT FOUND
+                ENDPOINT NOT FOUND
               </strong>
 
               <span>
-                Endpoint atau category tidak
-                ditemukan.
+                Try another keyword.
               </span>
-
             </div>
           )}
 
         </section>
 
-        {/* =================================================
-            FOOTER
-        ================================================= */}
-
-        <footer className="footer">
-
-          <div>
-            <strong>Documentation v3.0.0</strong>
-            <span>
-              ROBOTIC API SYSTEM
-            </span>
-          </div>
-
-          <div className="footer-status">
-            <span />
-            ALL SYSTEMS OPERATIONAL
-          </div>
-
-          <div>
-            BUILT FOR DEVELOPERS
-          </div>
-
-        </footer>
-
       </main>
 
-      {/* =================================================
-          FLOATING ROBOT
-      ================================================= */}
+      {/* FLOATING ROBOT */}
 
-      <div className="floating-robot">
+      <button
+        className="floating-robot"
+        onClick={openWhatsApp}
+        aria-label="Contact WhatsApp"
+      >
 
-        <RobotIcon />
+        <div className="robot-face">
 
-        <span className="floating-light" />
+          <span className="robot-eye left" />
+          <span className="robot-eye right" />
 
-      </div>
+          <div className="robot-mouth">
+            <i />
+            <i />
+            <i />
+          </div>
+
+        </div>
+
+        <span className="robot-dot" />
+
+      </button>
 
     </div>
   );
@@ -1175,8 +1098,10 @@ export default function App() {
    ENDPOINT CARD
 ========================================================= */
 
-function EndpointCard({ endpoint }) {
-
+function EndpointCard({
+  endpoint,
+  turnstileReady,
+}) {
   const [expanded, setExpanded] =
     useState(false);
 
@@ -1189,15 +1114,70 @@ function EndpointCard({ endpoint }) {
   const [loading, setLoading] =
     useState(false);
 
+  const [turnstileToken, setTurnstileToken] =
+    useState("");
+
+  const widgetRef =
+    React.useRef(null);
+
   const updateValue = (
     name,
     value
   ) => {
-    setValues((previous) => ({
-      ...previous,
+    setValues((prev) => ({
+      ...prev,
       [name]: value,
     }));
   };
+
+  useEffect(() => {
+    if (
+      !expanded ||
+      !turnstileReady ||
+      !widgetRef.current ||
+      !window.turnstile ||
+      turnstileToken
+    ) {
+      return;
+    }
+
+    try {
+      widgetRef.current.innerHTML = "";
+
+      window.turnstile.render(
+        widgetRef.current,
+        {
+          sitekey:
+            TURNSTILE_SITE_KEY,
+
+          theme: "dark",
+
+          callback: (token) => {
+            setTurnstileToken(
+              token
+            );
+          },
+
+          "expired-callback": () => {
+            setTurnstileToken("");
+          },
+
+          "error-callback": () => {
+            setTurnstileToken("");
+          },
+        }
+      );
+    } catch (error) {
+      console.error(
+        "Turnstile:",
+        error
+      );
+    }
+  }, [
+    expanded,
+    turnstileReady,
+    turnstileToken,
+  ]);
 
   const execute = async () => {
 
@@ -1206,12 +1186,59 @@ function EndpointCard({ endpoint }) {
 
     try {
 
+      if (!turnstileToken) {
+        throw new Error(
+          "Selesaikan verifikasi Cloudflare terlebih dahulu."
+        );
+      }
+
+      for (const param of endpoint.params) {
+        if (
+          param.required &&
+          !values[param.name]?.trim()
+        ) {
+          throw new Error(
+            `${param.label} wajib diisi.`
+          );
+        }
+      }
+
+      /* VERIFY TURNSTILE */
+
+      const verify = await fetch(
+        "/api/verify-turnstile",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+          body: JSON.stringify({
+            token:
+              turnstileToken,
+          }),
+        }
+      );
+
+      const verifyData =
+        await verify.json();
+
+      if (
+        !verify.ok ||
+        !verifyData.success
+      ) {
+        throw new Error(
+          "Verifikasi Cloudflare gagal."
+        );
+      }
+
+      /* API REQUEST */
+
       const query =
         new URLSearchParams();
 
       endpoint.params.forEach(
         (param) => {
-
           const value =
             values[param.name];
 
@@ -1224,74 +1251,70 @@ function EndpointCard({ endpoint }) {
               value
             );
           }
-
         }
       );
 
       const url =
         endpoint.path +
-        (
-          query.toString()
-            ? `?${query.toString()}`
-            : ""
-        );
-
-      const started =
-        performance.now();
+        (query.toString()
+          ? `?${query.toString()}`
+          : "");
 
       const res =
         await fetch(url);
 
-      const finished =
-        performance.now();
+      const contentType =
+        res.headers.get(
+          "content-type"
+        ) || "";
 
       let data;
 
-      try {
-        data =
-          await res.json();
-      } catch {
-        data =
-          await res.text();
+      if (
+        contentType.includes(
+          "application/json"
+        )
+      ) {
+        data = await res.json();
+      } else {
+        data = {
+          success: res.ok,
+          status: res.status,
+          response:
+            await res.text(),
+        };
       }
 
-      setResponse({
-        status: res.ok,
-        code: res.status,
-        time:
-          Math.round(
-            finished - started
-          ),
-        data,
-      });
+      setResponse(data);
 
     } catch (error) {
 
       setResponse({
-        status: false,
-        code: 0,
-        time: 0,
-        data: {
-          error:
-            error.message,
-        },
+        success: false,
+        message:
+          error.message ||
+          "Request failed.",
       });
 
     } finally {
 
       setLoading(false);
 
+      setTurnstileToken("");
+
+      if (
+        window.turnstile &&
+        widgetRef.current
+      ) {
+        try {
+          window.turnstile.reset();
+        } catch {}
+      }
     }
   };
 
   return (
-    <div
-      className={`endpoint ${
-        expanded ? "expanded" : ""
-      }`}
-    >
-
-      {/* HEADER */}
+    <div className="endpoint">
 
       <button
         className="endpoint-header"
@@ -1318,169 +1341,109 @@ function EndpointCard({ endpoint }) {
 
         </div>
 
-        <div className="endpoint-open">
+        <span className="endpoint-chevron">
           {expanded
-            ? "CLOSE"
-            : "OPEN"}
-          <span>
-            {expanded
-              ? "↑"
-              : "→"}
-          </span>
-        </div>
+            ? "−"
+            : "+"}
+        </span>
 
       </button>
-
-      {/* BODY */}
 
       {expanded && (
         <div className="endpoint-body">
 
-          <div className="endpoint-description">
-
-            <span>
-              DESCRIPTION
-            </span>
-
-            <p>
-              {endpoint.description}
-            </p>
-
-          </div>
+          <p className="endpoint-description">
+            {endpoint.description}
+          </p>
 
           {endpoint.params.length >
             0 && (
-            <div className="request-panel">
+            <div className="params">
 
-              <div className="panel-title">
-                PARAMETERS
-              </div>
+              {endpoint.params.map(
+                (param) => (
+                  <label
+                    className="param"
+                    key={
+                      param.name
+                    }
+                  >
 
-              <div className="params">
+                    <div className="param-label">
 
-                {endpoint.params.map(
-                  (param) => (
-                    <label
-                      className="param"
-                      key={
-                        param.name
-                      }
-                    >
+                      <span>
+                        {
+                          param.label
+                        }
+                      </span>
 
-                      <div className="param-label">
-
-                        <span>
-                          {param.label}
-                        </span>
-
+                      {param.required && (
                         <small>
-                          {param.required
-                            ? "REQUIRED"
-                            : "OPTIONAL"}
+                          REQUIRED
                         </small>
+                      )}
 
-                      </div>
+                    </div>
 
-                      <input
-                        value={
-                          values[
-                            param.name
-                          ] || ""
-                        }
-                        onChange={(e) =>
-                          updateValue(
-                            param.name,
-                            e.target
-                              .value
-                          )
-                        }
-                        placeholder={
-                          param.placeholder
-                        }
-                      />
+                    <input
+                      value={
+                        values[
+                          param.name
+                        ] || ""
+                      }
+                      onChange={(
+                        e
+                      ) =>
+                        updateValue(
+                          param.name,
+                          e.target.value
+                        )
+                      }
+                      placeholder={
+                        param.placeholder
+                      }
+                    />
 
-                    </label>
-                  )
-                )}
-
-              </div>
+                  </label>
+                )
+              )}
 
             </div>
           )}
 
-          <div className="execute-row">
+          {/* TURNSTILE */}
 
-            <button
-              className="execute-button"
-              onClick={execute}
-              disabled={loading}
-            >
+          <div className="turnstile-area">
 
-              <span>
-                {loading
-                  ? "PROCESSING"
-                  : "EXECUTE"}
-              </span>
-
-              <b>
-                {loading
-                  ? "..."
-                  : "▶"}
-              </b>
-
-            </button>
-
-            <div className="request-info">
-              METHOD{" "}
-              <strong>
-                {endpoint.method}
-              </strong>
-            </div>
+            <div
+              ref={
+                widgetRef
+              }
+            />
 
           </div>
 
+          <button
+            className="execute-button"
+            onClick={execute}
+            disabled={
+              loading ||
+              !turnstileToken
+            }
+          >
+            {loading
+              ? "EXECUTING..."
+              : "EXECUTE →"}
+          </button>
+
           {response && (
-            <div className="response-panel">
-
-              <div className="response-header">
-
-                <div>
-
-                  <span>
-                    RESPONSE
-                  </span>
-
-                  <strong
-                    className={
-                      response.status
-                        ? "success"
-                        : "error"
-                    }
-                  >
-                    {response.code ||
-                      "ERROR"}
-                  </strong>
-
-                </div>
-
-                <div>
-                  {response.time}ms
-                </div>
-
-              </div>
-
-              <pre>
-                {typeof response.data ===
-                "string"
-                  ? response.data
-                  : JSON.stringify(
-                      response.data,
-                      null,
-                      2
-                    )}
-              </pre>
-
-            </div>
+            <pre className="response">
+              {JSON.stringify(
+                response,
+                null,
+                2
+              )}
+            </pre>
           )}
 
         </div>
