@@ -1,5 +1,4 @@
 import React, { useMemo, useState } from "react";
-import "./style.css";
 
 /* =========================================================
    DIN API 3.0.0
