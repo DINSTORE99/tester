@@ -5,7 +5,6 @@ export default async function handler(req, res) {
       message: "Method not allowed",
     });
   }
-
   try {
     const { token } = req.body || {};
 
