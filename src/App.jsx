@@ -1,18 +1,17 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import "./style.css";
-import { supabase } from "./lib/supabase";
 
 /* =========================================================
-   DIN API 3.0.0
-   FULL MEMBER + DOCUMENTATION + API TESTER
+   DIN API
+   DOCUMENTATION + API TESTER
 ========================================================= */
 
 const API_BASE =
-  import.meta.env.VITE_API_BASE_URL ||
+  import.meta.env.VITE_API_URL ||
   window.location.origin;
 
 /* =========================================================
-   API ENDPOINTS
+   ENDPOINTS
 ========================================================= */
 
 const API_CATEGORIES = [
@@ -25,12 +24,12 @@ const API_CATEGORIES = [
         name: "AI Aiko",
         method: "GET",
         path: "/api/ai/aiko",
-        description: "AI chat assistant",
+        description: "AI chat assistant.",
         params: [
           {
             name: "q",
             label: "Prompt",
-            placeholder: "Halo",
+            placeholder: "Halo, siapa kamu?",
             required: true,
           },
           {
@@ -41,12 +40,25 @@ const API_CATEGORIES = [
           },
         ],
       },
-
+      {
+        name: "AI ChatGPT",
+        method: "GET",
+        path: "/api/ai/chatgpt",
+        description: "Chat dengan AI ChatGPT.",
+        params: [
+          {
+            name: "q",
+            label: "Question",
+            placeholder: "Jelaskan tentang AI",
+            required: true,
+          },
+        ],
+      },
       {
         name: "AI Lyrics Generator",
         method: "GET",
         path: "/api/ai/lyricsgen",
-        description: "Generate lyrics menggunakan AI",
+        description: "Generate lyrics menggunakan AI.",
         params: [
           {
             name: "theme",
@@ -74,12 +86,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "AI Coder",
         method: "GET",
         path: "/api/tools/aicoder",
-        description: "Generate kode menggunakan AI",
+        description: "Generate kode menggunakan AI.",
         params: [
           {
             name: "prompt",
@@ -89,32 +100,16 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "AI4Chat",
         method: "GET",
         path: "/api/ai/ai4chat",
-        description: "AI chat generation",
+        description: "AI chat generation.",
         params: [
           {
             name: "q",
             label: "Question",
             placeholder: "Halo",
-            required: true,
-          },
-        ],
-      },
-
-      {
-        name: "ChatGPT",
-        method: "POST",
-        path: "/api/ai/chatgpt",
-        description: "ChatGPT AI assistant",
-        params: [
-          {
-            name: "prompt",
-            label: "Prompt",
-            placeholder: "Jelaskan tentang JavaScript",
             required: true,
           },
         ],
@@ -131,21 +126,21 @@ const API_CATEGORIES = [
         name: "Admin Status",
         method: "GET",
         path: "/api/admin/status",
-        description: "Check admin status",
+        description: "Check admin status.",
         params: [],
       },
       {
         name: "Admin Info",
         method: "GET",
         path: "/api/admin/info",
-        description: "Get admin information",
+        description: "Get admin information.",
         params: [],
       },
       {
         name: "Server Status",
         method: "GET",
         path: "/api/admin/server",
-        description: "Check server information",
+        description: "Check server information.",
         params: [],
       },
     ],
@@ -160,7 +155,7 @@ const API_CATEGORIES = [
         name: "Cache Get",
         method: "GET",
         path: "/api/cache/get",
-        description: "Get cached data",
+        description: "Get cached data.",
         params: [
           {
             name: "key",
@@ -174,7 +169,7 @@ const API_CATEGORIES = [
         name: "Cache Clear",
         method: "GET",
         path: "/api/cache/clear",
-        description: "Clear cache",
+        description: "Clear cache.",
         params: [],
       },
     ],
@@ -189,7 +184,7 @@ const API_CATEGORIES = [
         name: "TikTok Downloader",
         method: "GET",
         path: "/api/download/tiktok",
-        description: "Download video TikTok",
+        description: "Download video TikTok.",
         params: [
           {
             name: "url",
@@ -199,12 +194,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Instagram Downloader",
         method: "GET",
         path: "/api/download/instagram",
-        description: "Download media Instagram",
+        description: "Download media Instagram.",
         params: [
           {
             name: "url",
@@ -214,12 +208,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "CapCut Downloader",
         method: "GET",
         path: "/api/download/capcut",
-        description: "Download CapCut",
+        description: "Download CapCut.",
         params: [
           {
             name: "url",
@@ -229,12 +222,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Facebook Downloader",
         method: "GET",
         path: "/api/download/facebook",
-        description: "Download Facebook media",
+        description: "Download Facebook media.",
         params: [
           {
             name: "url",
@@ -244,17 +236,86 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "MediaFire Downloader",
         method: "GET",
         path: "/api/download/mediafire",
-        description: "Download MediaFire",
+        description: "Download MediaFire.",
         params: [
           {
             name: "url",
             label: "MediaFire URL",
             placeholder: "https://mediafire.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Pinterest Downloader",
+        method: "GET",
+        path: "/api/download/pinterest",
+        description: "Download media Pinterest.",
+        params: [
+          {
+            name: "url",
+            label: "Pinterest URL",
+            placeholder: "https://pinterest.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Spotify Downloader",
+        method: "GET",
+        path: "/api/download/spotify",
+        description: "Get Spotify media information.",
+        params: [
+          {
+            name: "url",
+            label: "Spotify URL",
+            placeholder: "https://open.spotify.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "SoundCloud Downloader",
+        method: "GET",
+        path: "/api/download/soundcloud",
+        description: "Download SoundCloud media.",
+        params: [
+          {
+            name: "url",
+            label: "SoundCloud URL",
+            placeholder: "https://soundcloud.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "YouTube Play",
+        method: "GET",
+        path: "/api/download/ytplay",
+        description: "Get YouTube media.",
+        params: [
+          {
+            name: "url",
+            label: "YouTube URL",
+            placeholder: "https://youtube.com/watch?v=...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "YouTube MP3",
+        method: "GET",
+        path: "/api/download/ytmp3",
+        description: "Convert YouTube audio.",
+        params: [
+          {
+            name: "url",
+            label: "YouTube URL",
+            placeholder: "https://youtube.com/watch?v=...",
             required: true,
           },
         ],
@@ -271,28 +332,28 @@ const API_CATEGORIES = [
         name: "Random Joke",
         method: "GET",
         path: "/api/fun/joke",
-        description: "Generate random joke",
+        description: "Generate random joke.",
         params: [],
       },
       {
         name: "Truth",
         method: "GET",
         path: "/api/fun/truth",
-        description: "Random truth question",
+        description: "Random truth question.",
         params: [],
       },
       {
         name: "Dare",
         method: "GET",
         path: "/api/fun/dare",
-        description: "Random dare",
+        description: "Random dare.",
         params: [],
       },
       {
         name: "Quotes",
         method: "GET",
         path: "/api/fun/quotes",
-        description: "Random quotes",
+        description: "Random quotes.",
         params: [],
       },
     ],
@@ -307,7 +368,7 @@ const API_CATEGORIES = [
         name: "Leaderboard",
         method: "GET",
         path: "/api/leaderboard",
-        description: "Get leaderboard data",
+        description: "Get leaderboard data.",
         params: [],
       },
     ],
@@ -322,14 +383,14 @@ const API_CATEGORIES = [
         name: "Library List",
         method: "GET",
         path: "/api/library",
-        description: "Get library information",
+        description: "Get library information.",
         params: [],
       },
       {
         name: "Library Search",
         method: "GET",
         path: "/api/library/search",
-        description: "Search library",
+        description: "Search library.",
         params: [
           {
             name: "q",
@@ -351,7 +412,7 @@ const API_CATEGORIES = [
         name: "Text Maker",
         method: "GET",
         path: "/api/maker/text",
-        description: "Create styled text",
+        description: "Create styled text.",
         params: [
           {
             name: "text",
@@ -361,12 +422,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Sticker Maker",
         method: "GET",
         path: "/api/maker/sticker",
-        description: "Create sticker",
+        description: "Create sticker.",
         params: [
           {
             name: "url",
@@ -376,12 +436,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Logo Maker",
         method: "GET",
         path: "/api/maker/logo",
-        description: "Generate logo",
+        description: "Generate logo.",
         params: [
           {
             name: "text",
@@ -403,15 +462,14 @@ const API_CATEGORIES = [
         name: "Latest News",
         method: "GET",
         path: "/api/news/latest",
-        description: "Get latest news",
+        description: "Get latest news.",
         params: [],
       },
-
       {
         name: "Search News",
         method: "GET",
         path: "/api/news/search",
-        description: "Search news",
+        description: "Search news.",
         params: [
           {
             name: "q",
@@ -433,15 +491,14 @@ const API_CATEGORIES = [
         name: "Random Image",
         method: "GET",
         path: "/api/random/image",
-        description: "Get random image",
+        description: "Get random image.",
         params: [],
       },
-
       {
         name: "Random Number",
         method: "GET",
         path: "/api/random/number",
-        description: "Generate random number",
+        description: "Generate random number.",
         params: [
           {
             name: "min",
@@ -469,7 +526,7 @@ const API_CATEGORIES = [
         name: "Web Search",
         method: "GET",
         path: "/api/search/web",
-        description: "Search information from web",
+        description: "Search information from web.",
         params: [
           {
             name: "q",
@@ -479,12 +536,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Image Search",
         method: "GET",
         path: "/api/search/image",
-        description: "Search images",
+        description: "Search images.",
         params: [
           {
             name: "q",
@@ -506,7 +562,7 @@ const API_CATEGORIES = [
         name: "TikTok Stalk",
         method: "GET",
         path: "/api/stalk/tiktok",
-        description: "Get public TikTok profile information",
+        description: "Get public TikTok profile information.",
         params: [
           {
             name: "username",
@@ -516,12 +572,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Instagram Stalk",
         method: "GET",
         path: "/api/stalk/instagram",
-        description: "Get public Instagram profile information",
+        description: "Get public Instagram profile information.",
         params: [
           {
             name: "username",
@@ -543,7 +598,7 @@ const API_CATEGORIES = [
         name: "Domain Info",
         method: "GET",
         path: "/api/tools/domaininfo",
-        description: "Check domain information",
+        description: "Check domain information.",
         params: [
           {
             name: "domain",
@@ -553,12 +608,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "QR Generator",
         method: "GET",
         path: "/api/tools/qr",
-        description: "Generate QR code",
+        description: "Generate QR code.",
         params: [
           {
             name: "text",
@@ -568,12 +622,11 @@ const API_CATEGORIES = [
           },
         ],
       },
-
       {
         name: "Short URL",
         method: "GET",
         path: "/api/tools/shorturl",
-        description: "Shorten URL",
+        description: "Shorten URL.",
         params: [
           {
             name: "url",
@@ -588,15 +641,8 @@ const API_CATEGORIES = [
 ];
 
 /* =========================================================
-   HELPERS
+   ROBOT
 ========================================================= */
-
-function getTotalEndpoints() {
-  return API_CATEGORIES.reduce(
-    (total, category) => total + category.endpoints.length,
-    0
-  );
-}
 
 function RobotIcon() {
   return (
@@ -609,607 +655,117 @@ function RobotIcon() {
 }
 
 /* =========================================================
-   AUTH PAGE
+   URL BUILDER
 ========================================================= */
 
-function AuthPage() {
-  const [mode, setMode] = useState("login");
+function buildUrl(path, values) {
+  const query = new URLSearchParams();
 
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [confirmPassword, setConfirmPassword] =
-    useState("");
-
-  const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  const resetMessages = () => {
-    setMessage("");
-    setError("");
-  };
-
-  const login = async () => {
-    resetMessages();
-
-    if (!email || !password) {
-      setError("Email dan password wajib diisi.");
-      return;
+  Object.entries(values).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== "") {
+      query.set(key, value);
     }
+  });
 
-    setLoading(true);
+  const queryString = query.toString();
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-    if (error) {
-      setError(error.message);
-    }
-
-    setLoading(false);
-  };
-
-  const register = async () => {
-    resetMessages();
-
-    if (!email || !password) {
-      setError("Email dan password wajib diisi.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError(
-        "Password minimal 6 karakter."
-      );
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      setError(
-        "Konfirmasi password tidak sama."
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    const {
-      data,
-      error,
-    } = await supabase.auth.signUp({
-      email,
-      password,
-    });
-
-    if (error) {
-      setError(error.message);
-    } else if (!data.session) {
-      setMessage(
-        "Pendaftaran berhasil. Silakan cek email untuk verifikasi."
-      );
-      setMode("login");
-    }
-
-    setLoading(false);
-  };
-
-  const forgotPassword = async () => {
-    resetMessages();
-
-    if (!email) {
-      setError(
-        "Masukkan email terlebih dahulu."
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    const redirectTo =
-      `${window.location.origin}`;
-
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo,
-        }
-      );
-
-    if (error) {
-      setError(error.message);
-    } else {
-      setMessage(
-        "Link reset password sudah dikirim ke email."
-      );
-    }
-
-    setLoading(false);
-  };
-
-  const googleLogin = async () => {
-    resetMessages();
-
-    setLoading(true);
-
-    const { error } =
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
-
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    }
-  };
-
-  return (
-    <div className="auth-page">
-      <div className="background-grid" />
-      <div className="scanlines" />
-
-      <div className="auth-card">
-        <div className="auth-logo">
-          <RobotIcon />
-        </div>
-
-        <div className="auth-brand">
-          <strong>DIN API🔥</strong>
-          <small>API SYSTEM</small>
-        </div>
-
-        <div className="auth-status">
-          <span />
-          SYSTEM ONLINE
-        </div>
-
-        {mode === "login" && (
-          <>
-            <h1>Welcome Back</h1>
-
-            <p className="auth-description">
-              Login untuk mengakses dashboard
-              DIN API.
-            </p>
-
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
-            />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
-            />
-
-            {error && (
-              <div className="auth-error">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="auth-success">
-                {message}
-              </div>
-            )}
-
-            <button
-              className="auth-main-button"
-              onClick={login}
-              disabled={loading}
-            >
-              {loading
-                ? "PROCESSING..."
-                : "LOGIN"}
-            </button>
-
-            <button
-              className="google-button"
-              onClick={googleLogin}
-              disabled={loading}
-            >
-              <span>G</span>
-              LOGIN WITH GOOGLE
-            </button>
-
-            <button
-              className="text-button"
-              onClick={() => {
-                resetMessages();
-                setMode("forgot");
-              }}
-            >
-              LUPA PASSWORD?
-            </button>
-
-            <div className="auth-switch">
-              Belum punya akun?
-              <button
-                onClick={() => {
-                  resetMessages();
-                  setMode("register");
-                }}
-              >
-                DAFTAR
-              </button>
-            </div>
-          </>
-        )}
-
-        {mode === "register" && (
-          <>
-            <h1>Create Account</h1>
-
-            <p className="auth-description">
-              Buat akun member DIN API.
-            </p>
-
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
-            />
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) =>
-                setPassword(e.target.value)
-              }
-            />
-
-            <input
-              type="password"
-              placeholder="Konfirmasi Password"
-              value={confirmPassword}
-              onChange={(e) =>
-                setConfirmPassword(
-                  e.target.value
-                )
-              }
-            />
-
-            {error && (
-              <div className="auth-error">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="auth-success">
-                {message}
-              </div>
-            )}
-
-            <button
-              className="auth-main-button"
-              onClick={register}
-              disabled={loading}
-            >
-              {loading
-                ? "CREATING..."
-                : "DAFTAR"}
-            </button>
-
-            <div className="auth-switch">
-              Sudah punya akun?
-              <button
-                onClick={() => {
-                  resetMessages();
-                  setMode("login");
-                }}
-              >
-                LOGIN
-              </button>
-            </div>
-          </>
-        )}
-
-        {mode === "forgot" && (
-          <>
-            <h1>Reset Password</h1>
-
-            <p className="auth-description">
-              Masukkan email untuk mendapatkan
-              link reset password.
-            </p>
-
-            <input
-              type="email"
-              placeholder="Email"
-              value={email}
-              onChange={(e) =>
-                setEmail(e.target.value)
-              }
-            />
-
-            {error && (
-              <div className="auth-error">
-                {error}
-              </div>
-            )}
-
-            {message && (
-              <div className="auth-success">
-                {message}
-              </div>
-            )}
-
-            <button
-              className="auth-main-button"
-              onClick={forgotPassword}
-              disabled={loading}
-            >
-              {loading
-                ? "SENDING..."
-                : "KIRIM LINK RESET"}
-            </button>
-
-            <div className="auth-switch">
-              Ingat password?
-              <button
-                onClick={() => {
-                  resetMessages();
-                  setMode("login");
-                }}
-              >
-                LOGIN
-              </button>
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  );
+  return `${API_BASE}${path}${
+    queryString ? `?${queryString}` : ""
+  }`;
 }
 
 /* =========================================================
-   LOADING
-========================================================= */
-
-function LoadingPage() {
-  return (
-    <div className="loading-page">
-      <div className="loading-box">
-        <RobotIcon />
-
-        <h2>DIN API🔥</h2>
-
-        <div className="loading-dot">
-          CONNECTING...
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   MAIN APP
+   APP
 ========================================================= */
 
 export default function App() {
-  const [user, setUser] = useState(null);
-  const [profile, setProfile] = useState(null);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [openCategory, setOpenCategory] = useState("AI");
+  const [openEndpoint, setOpenEndpoint] = useState(null);
 
-  const [authLoading, setAuthLoading] =
-    useState(true);
+  const [values, setValues] = useState({});
+  const [responses, setResponses] = useState({});
+  const [loading, setLoading] = useState({});
 
-  const [menuOpen, setMenuOpen] =
-    useState(false);
-
-  const [search, setSearch] =
-    useState("");
-
-  const [activePage, setActivePage] =
-    useState("home");
-
-  const [selectedEndpoint, setSelectedEndpoint] =
-    useState(null);
-
-  const [testerOpen, setTesterOpen] =
-    useState(false);
-
-  const [testerValues, setTesterValues] =
-    useState({});
-
-  const [testLoading, setTestLoading] =
-    useState(false);
-
-  const [testResponse, setTestResponse] =
-    useState(null);
-
-  const [copied, setCopied] =
-    useState(false);
-
-  /* =======================================================
-     AUTH SESSION
-  ======================================================= */
-
-  useEffect(() => {
-    let mounted = true;
-
-    async function initialize() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      if (session?.user) {
-        setUser(session.user);
-        await loadProfile(
-          session.user.id
-        );
-      }
-
-      setAuthLoading(false);
-    }
-
-    initialize();
-
-    const {
-      data: { subscription },
-    } =
-      supabase.auth.onAuthStateChange(
-        async (_event, session) => {
-          if (!mounted) return;
-
-          setUser(
-            session?.user || null
-          );
-
-          if (session?.user) {
-            await loadProfile(
-              session.user.id
-            );
-          } else {
-            setProfile(null);
-          }
-        }
-      );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
+  const totalEndpoints = useMemo(() => {
+    return API_CATEGORIES.reduce(
+      (total, category) =>
+        total + category.endpoints.length,
+      0
+    );
   }, []);
 
-  /* =======================================================
-     PROFILE
-  ======================================================= */
+  const filteredCategories = useMemo(() => {
+    const keyword = search.trim().toLowerCase();
 
-  async function loadProfile(userId) {
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", userId)
-      .maybeSingle();
-
-    if (error) {
-      console.error(
-        "PROFILE ERROR:",
-        error
-      );
-      return;
+    if (!keyword) {
+      return API_CATEGORIES;
     }
 
-    if (data) {
-      setProfile(data);
-    }
-  }
+    return API_CATEGORIES
+      .map((category) => {
+        const categoryMatch =
+          category.name
+            .toLowerCase()
+            .includes(keyword);
 
-  /* =======================================================
-     LOGOUT
-  ======================================================= */
-
-  async function logout() {
-    await supabase.auth.signOut();
-
-    setUser(null);
-    setProfile(null);
-    setActivePage("home");
-  }
-
-  /* =======================================================
-     DATA
-  ======================================================= */
-
-  const totalEndpoints =
-    getTotalEndpoints();
-
-  const filteredCategories =
-    useMemo(() => {
-      const keyword =
-        search
-          .trim()
-          .toLowerCase();
-
-      if (!keyword) {
-        return API_CATEGORIES;
-      }
-
-      return API_CATEGORIES
-        .map((category) => {
-          const categoryMatch =
-            category.name
-              .toLowerCase()
-              .includes(keyword);
-
-          const endpoints =
-            category.endpoints.filter(
-              (endpoint) =>
-                endpoint.name
-                  .toLowerCase()
-                  .includes(keyword) ||
-                endpoint.path
-                  .toLowerCase()
-                  .includes(keyword) ||
-                endpoint.description
-                  .toLowerCase()
-                  .includes(keyword)
+        const endpoints =
+          category.endpoints.filter((endpoint) => {
+            return (
+              endpoint.name
+                .toLowerCase()
+                .includes(keyword) ||
+              endpoint.path
+                .toLowerCase()
+                .includes(keyword) ||
+              endpoint.description
+                .toLowerCase()
+                .includes(keyword)
             );
+          });
 
-          if (categoryMatch) {
-            return category;
-          }
+        if (categoryMatch) {
+          return category;
+        }
 
-          if (endpoints.length) {
-            return {
-              ...category,
-              endpoints,
-            };
-          }
+        if (endpoints.length > 0) {
+          return {
+            ...category,
+            endpoints,
+          };
+        }
 
-          return null;
-        })
-        .filter(Boolean);
-    }, [search]);
+        return null;
+      })
+      .filter(Boolean);
+  }, [search]);
 
   /* =======================================================
-     NAVIGATION
+     HOME
   ======================================================= */
 
-  function scrollHome() {
+  const scrollHome = () => {
     setMenuOpen(false);
-    setActivePage("home");
 
     window.scrollTo({
       top: 0,
       behavior: "smooth",
     });
-  }
+  };
 
-  function scrollCategory(name) {
+  /* =======================================================
+     CATEGORY
+  ======================================================= */
+
+  const scrollCategory = (name) => {
     setMenuOpen(false);
-    setActivePage("docs");
+    setOpenCategory(name);
 
     setTimeout(() => {
-      const element =
-        document.getElementById(
-          `category-${name.toLowerCase()}`
-        );
+      const element = document.getElementById(
+        `category-${name.toLowerCase()}`
+      );
 
       if (element) {
         element.scrollIntoView({
@@ -1218,227 +774,146 @@ export default function App() {
         });
       }
     }, 100);
-  }
+  };
 
   /* =======================================================
-     TESTER
+     PARAMETER
   ======================================================= */
 
-  function openTester(endpoint) {
-    setSelectedEndpoint(endpoint);
+  const updateValue = (
+    endpointPath,
+    parameter,
+    value
+  ) => {
+    setValues((previous) => ({
+      ...previous,
+      [endpointPath]: {
+        ...(previous[endpointPath] || {}),
+        [parameter]: value,
+      },
+    }));
+  };
 
-    const initial = {};
+  /* =======================================================
+     TEST API
+  ======================================================= */
 
-    endpoint.params.forEach(
-      (param) => {
-        initial[param.name] = "";
-      }
-    );
+  const testEndpoint = async (endpoint) => {
+    const endpointValues =
+      values[endpoint.path] || {};
 
-    setTesterValues(initial);
-    setTestResponse(null);
-    setTesterOpen(true);
-  }
+    for (const parameter of endpoint.params) {
+      if (
+        parameter.required &&
+        !endpointValues[parameter.name]
+      ) {
+        setResponses((previous) => ({
+          ...previous,
+          [endpoint.path]: {
+            error: `Parameter "${parameter.name}" wajib diisi.`,
+          },
+        }));
 
-  function closeTester() {
-    setTesterOpen(false);
-    setSelectedEndpoint(null);
-    setTestResponse(null);
-  }
-
-  async function executeTest() {
-    if (!selectedEndpoint) return;
-
-    setTestLoading(true);
-    setTestResponse(null);
-
-    try {
-      const values = {
-        ...testerValues,
-      };
-
-      const missing =
-        selectedEndpoint.params.find(
-          (param) =>
-            param.required &&
-            !String(
-              values[param.name] || ""
-            ).trim()
-        );
-
-      if (missing) {
-        setTestResponse({
-          error: true,
-          message:
-            `${missing.label || missing.name} wajib diisi.`,
-        });
-
-        setTestLoading(false);
         return;
       }
-
-      let url =
-        `${API_BASE}${selectedEndpoint.path}`;
-
-      const headers = {
-        Accept:
-          "application/json",
-      };
-
-      if (profile?.api_key) {
-        headers[
-          "x-api-key"
-        ] = profile.api_key;
-
-        headers[
-          "Authorization"
-        ] =
-          `Bearer ${profile.api_key}`;
-      }
-
-      const method =
-        selectedEndpoint.method
-          .toUpperCase();
-
-      let options = {
-        method,
-        headers,
-      };
-
-      if (method === "GET") {
-        const query =
-          new URLSearchParams();
-
-        Object.entries(values).forEach(
-          ([key, value]) => {
-            if (
-              value !== undefined &&
-              String(value).trim() !== ""
-            ) {
-              query.append(
-                key,
-                value
-              );
-            }
-          }
-        );
-
-        const queryString =
-          query.toString();
-
-        if (queryString) {
-          url += `?${queryString}`;
-        }
-      } else {
-        headers[
-          "Content-Type"
-        ] =
-          "application/json";
-
-        options.body =
-          JSON.stringify(values);
-      }
-
-      const response =
-        await fetch(
-          url,
-          options
-        );
-
-      const text =
-        await response.text();
-
-      let data;
-
-      try {
-        data =
-          JSON.parse(text);
-      } catch {
-        data = text;
-      }
-
-      setTestResponse({
-        status:
-          response.status,
-        ok: response.ok,
-        data,
-      });
-    } catch (error) {
-      setTestResponse({
-        error: true,
-        message:
-          error.message ||
-          "Request gagal.",
-      });
     }
 
-    setTestLoading(false);
-  }
+    const url = buildUrl(
+      endpoint.path,
+      endpointValues
+    );
 
-  /* =======================================================
-     COPY KEY
-  ======================================================= */
+    setLoading((previous) => ({
+      ...previous,
+      [endpoint.path]: true,
+    }));
 
-  async function copyApiKey() {
-    if (!profile?.api_key) return;
+    setResponses((previous) => ({
+      ...previous,
+      [endpoint.path]: null,
+    }));
 
     try {
-      await navigator.clipboard.writeText(
-        profile.api_key
-      );
+      const response = await fetch(url, {
+        method: endpoint.method,
+        headers: {
+          Accept: "application/json",
+        },
+      });
 
-      setCopied(true);
+      const contentType =
+        response.headers.get("content-type") || "";
 
-      setTimeout(
-        () => setCopied(false),
-        2000
-      );
-    } catch {
-      alert(
-        "Gagal menyalin API key."
-      );
+      let result;
+
+      if (contentType.includes("application/json")) {
+        result = await response.json();
+      } else {
+        result = await response.text();
+      }
+
+      setResponses((previous) => ({
+        ...previous,
+        [endpoint.path]: {
+          status: response.status,
+          ok: response.ok,
+          data: result,
+        },
+      }));
+    } catch (error) {
+      setResponses((previous) => ({
+        ...previous,
+        [endpoint.path]: {
+          error:
+            error?.message ||
+            "Gagal menghubungkan ke API.",
+        },
+      }));
+    } finally {
+      setLoading((previous) => ({
+        ...previous,
+        [endpoint.path]: false,
+      }));
     }
-  }
+  };
 
   /* =======================================================
-     AUTH CHECK
+     COPY
   ======================================================= */
 
-  if (authLoading) {
-    return <LoadingPage />;
-  }
-
-  if (!user) {
-    return <AuthPage />;
-  }
+  const copyUrl = async (url) => {
+    try {
+      await navigator.clipboard.writeText(url);
+      alert("URL berhasil disalin!");
+    } catch {
+      alert("Gagal menyalin URL.");
+    }
+  };
 
   /* =======================================================
-     DASHBOARD
+     RENDER
   ======================================================= */
 
   return (
     <div className="app">
+      {/* BACKGROUND */}
       <div className="background-grid" />
       <div className="scanlines" />
 
       <div className="ambient ambient-one" />
       <div className="ambient ambient-two" />
 
-      {/* ===================================================
-          HEADER
-      =================================================== */}
-
+      {/* HEADER */}
       <header className="header">
         <div className="header-left">
           <button
             className={`menu-button ${
-              menuOpen
-                ? "active"
-                : ""
+              menuOpen ? "active" : ""
             }`}
             onClick={() =>
               setMenuOpen(true)
             }
+            aria-label="Open menu"
           >
             <span />
             <span />
@@ -1449,13 +924,8 @@ export default function App() {
             <RobotIcon />
 
             <div>
-              <strong>
-                DIN API🔥
-              </strong>
-
-              <small>
-                ROBOT SYSTEM
-              </small>
+              <strong>DIN API🔥</strong>
+              <small>ROBOT SYSTEM</small>
             </div>
           </div>
         </div>
@@ -1472,23 +942,15 @@ export default function App() {
         </div>
       </header>
 
-      {/* ===================================================
-          OVERLAY
-      =================================================== */}
-
+      {/* OVERLAY */}
       <div
         className={`nav-overlay ${
           menuOpen ? "show" : ""
         }`}
-        onClick={() =>
-          setMenuOpen(false)
-        }
+        onClick={() => setMenuOpen(false)}
       />
 
-      {/* ===================================================
-          SIDEBAR
-      =================================================== */}
-
+      {/* SIDEBAR */}
       <aside
         className={`side-nav ${
           menuOpen ? "open" : ""
@@ -1496,13 +958,8 @@ export default function App() {
       >
         <div className="side-top">
           <div>
-            <small>
-              NAVIGATION
-            </small>
-
-            <h2>
-              DIN API🔥
-            </h2>
+            <small>NAVIGATION</small>
+            <h2>DIN API🔥</h2>
           </div>
 
           <button
@@ -1528,37 +985,13 @@ export default function App() {
 
             <b>HOME</b>
 
-            <small>
-              00
-            </small>
-          </button>
-
-          <button
-            className="nav-item"
-            onClick={() => {
-              setMenuOpen(false);
-              setActivePage(
-                "dashboard"
-              );
-            }}
-          >
-            <span className="nav-icon green">
-              ◉
-            </span>
-
-            <b>DASHBOARD</b>
-
-            <small>
-              01
-            </small>
+            <small>00</small>
           </button>
 
           {API_CATEGORIES.map(
             (category, index) => (
               <button
-                key={
-                  category.name
-                }
+                key={category.name}
                 className="nav-item"
                 onClick={() =>
                   scrollCategory(
@@ -1569,21 +1002,13 @@ export default function App() {
                 <span
                   className={`nav-icon ${category.color}`}
                 >
-                  {
-                    category.icon
-                  }
+                  {category.icon}
                 </span>
 
-                <b>
-                  {
-                    category.name
-                  }
-                </b>
+                <b>{category.name}</b>
 
                 <small>
-                  {String(
-                    index + 2
-                  ).padStart(
+                  {String(index + 1).padStart(
                     2,
                     "0"
                   )}
@@ -1591,692 +1016,430 @@ export default function App() {
               </button>
             )
           )}
-
-          <button
-            className="nav-item"
-            onClick={() => {
-              setMenuOpen(false);
-              setActivePage(
-                "profile"
-              );
-            }}
-          >
-            <span className="nav-icon">
-              ◎
-            </span>
-
-            <b>PROFILE</b>
-
-            <small>
-              99
-            </small>
-          </button>
-
-          <button
-            className="nav-item logout-nav"
-            onClick={logout}
-          >
-            <span className="nav-icon red">
-              ⇥
-            </span>
-
-            <b>LOGOUT</b>
-
-            <small>
-              ↪
-            </small>
-          </button>
         </nav>
 
         <div className="side-footer">
-          <span>
-            SYSTEM STATUS
-          </span>
-
-          <strong>
-            ● OPERATIONAL
-          </strong>
+          <span>SYSTEM STATUS</span>
+          <strong>● OPERATIONAL</strong>
         </div>
       </aside>
 
-      {/* ===================================================
-          MAIN
-      =================================================== */}
-
+      {/* MAIN */}
       <main className="main">
-        {/* =================================================
-            DASHBOARD
-        ================================================= */}
+        {/* HERO */}
+        <section className="hero">
+          <div className="hero-robot-decoration">
+            <div className="robot-head">
+              <div className="robot-eye left" />
+              <div className="robot-eye right" />
+              <div className="robot-mouth" />
+            </div>
+          </div>
 
-        {activePage ===
-          "dashboard" && (
-          <section className="member-dashboard">
-            <div className="dashboard-header">
-              <div>
-                <span>
-                  MEMBER PANEL
-                </span>
+          <div className="hero-content">
+            <div className="terminal">
+              <span className="terminal-light" />
 
-                <h1>
-                  Dashboard
-                </h1>
+              TERMINAL ACTIVE
 
-                <p>
-                  Selamat datang kembali,
-                  {user.email}
-                </p>
-              </div>
-
-              <div className="role-badge">
-                {(
-                  profile?.role ||
-                  "MEMBER"
-                ).toUpperCase()}
-              </div>
+              <span className="terminal-lines">
+                /// SYSTEM READY
+              </span>
             </div>
 
-            <div className="dashboard-grid">
-              <div className="dashboard-card">
-                <span>
-                  ACCOUNT
-                </span>
+            <div className="hero-title">
+              <h1>DOCS</h1>
+              <span>v3.0.0</span>
+            </div>
 
+            <p>
+              A comprehensive and user
+              friendly API solution for
+              modern applications.
+            </p>
+
+            <div className="hero-system">
+              <div className="system-item">
+                <span>CATEGORIES</span>
                 <strong>
-                  ACTIVE
+                  {API_CATEGORIES.length}
                 </strong>
               </div>
 
-              <div className="dashboard-card">
-                <span>
-                  ENDPOINTS
-                </span>
-
+              <div className="system-item active">
+                <span>ENDPOINTS</span>
                 <strong>
                   {totalEndpoints}
                 </strong>
               </div>
 
-              <div className="dashboard-card">
-                <span>
-                  REQUESTS
-                </span>
-
-                <strong>
-                  {profile?.requests ??
-                    0}
-                </strong>
-              </div>
-
-              <div className="dashboard-card">
-                <span>
-                  PLAN
-                </span>
-
-                <strong>
-                  {profile?.plan ||
-                    "FREE"}
-                </strong>
+              <div className="system-item">
+                <span>STATUS</span>
+                <strong>ONLINE</strong>
               </div>
             </div>
+          </div>
+        </section>
 
-            <div className="api-key-card">
-              <div>
-                <span>
-                  API KEY
-                </span>
+        {/* SEARCH */}
+        <div className="search-wrapper">
+          <input
+            type="text"
+            value={search}
+            onChange={(event) =>
+              setSearch(event.target.value)
+            }
+            placeholder="Search endpoint, category..."
+          />
+        </div>
 
-                <h2>
-                  Your API Access Key
-                </h2>
+        {/* DOCUMENTATION */}
+        {filteredCategories.length === 0 ? (
+          <div className="empty-state">
+            <strong>
+              ENDPOINT NOT FOUND
+            </strong>
 
-                <p>
-                  Gunakan API key ini
-                  untuk mengakses API
-                  DIN API.
-                </p>
-              </div>
+            <p>
+              Tidak ada endpoint yang cocok
+              dengan pencarian "{search}".
+            </p>
+          </div>
+        ) : (
+          filteredCategories.map(
+            (category) => {
+              const isCategoryOpen =
+                openCategory ===
+                category.name;
 
-              <div className="api-key-box">
-                <code>
-                  {profile?.api_key ||
-                    "API KEY BELUM TERSEDIA"}
-                </code>
-
-                <button
-                  onClick={
-                    copyApiKey
-                  }
+              return (
+                <section
+                  key={category.name}
+                  id={`category-${category.name.toLowerCase()}`}
+                  className={`category ${
+                    isCategoryOpen
+                      ? "open"
+                      : ""
+                  } ${category.name.toLowerCase()}`}
                 >
-                  {copied
-                    ? "COPIED"
-                    : "COPY"}
-                </button>
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* =================================================
-            PROFILE
-        ================================================= */}
-
-        {activePage ===
-          "profile" && (
-          <section className="member-dashboard">
-            <div className="dashboard-header">
-              <div>
-                <span>
-                  ACCOUNT
-                </span>
-
-                <h1>
-                  Profile
-                </h1>
-              </div>
-            </div>
-
-            <div className="profile-card">
-              <div className="profile-avatar">
-                {(
-                  user.email ||
-                  "U"
-                )
-                  .charAt(0)
-                  .toUpperCase()}
-              </div>
-
-              <div className="profile-info">
-                <span>
-                  EMAIL
-                </span>
-
-                <strong>
-                  {user.email}
-                </strong>
-
-                <span>
-                  ROLE
-                </span>
-
-                <strong>
-                  {(
-                    profile?.role ||
-                    "MEMBER"
-                  ).toUpperCase()}
-                </strong>
-
-                <span>
-                  STATUS
-                </span>
-
-                <strong>
-                  {profile?.status ||
-                    "ACTIVE"}
-                </strong>
-              </div>
-            </div>
-
-            <button
-              className="danger-button"
-              onClick={logout}
-            >
-              LOGOUT
-            </button>
-          </section>
-        )}
-
-        {/* =================================================
-            HOME / DOCS
-        ================================================= */}
-
-        {(activePage ===
-          "home" ||
-          activePage ===
-            "docs") && (
-          <>
-            {/* HERO */}
-
-            <section className="hero">
-              <div className="hero-robot-decoration">
-                <div className="robot-head">
-                  <div className="robot-eye left" />
-                  <div className="robot-eye right" />
-                  <div className="robot-mouth" />
-                </div>
-              </div>
-
-              <div className="hero-content">
-                <div className="terminal">
-                  <span className="terminal-light" />
-
-                  TERMINAL ACTIVE
-
-                  <span className="terminal-lines">
-                    /// SYSTEM READY
-                  </span>
-                </div>
-
-                <div className="hero-title">
-                  <h1>
-                    DOCS
-                  </h1>
-
-                  <span>
-                    v3.0.0
-                  </span>
-                </div>
-
-                <p>
-                  A comprehensive and
-                  user friendly API
-                  solution for modern
-                  applications.
-                </p>
-
-                <div className="hero-system">
-                  <div className="system-item">
-                    <span>
-                      CATEGORIES
-                    </span>
-
-                    <strong>
-                      {
-                        API_CATEGORIES.length
-                      }
-                    </strong>
-                  </div>
-
-                  <div className="system-item active">
-                    <span>
-                      ENDPOINTS
-                    </span>
-
-                    <strong>
-                      {
-                        totalEndpoints
-                      }
-                    </strong>
-                  </div>
-
-                  <div className="system-item">
-                    <span>
-                      STATUS
-                    </span>
-
-                    <strong>
-                      ONLINE
-                    </strong>
-                  </div>
-                </div>
-              </div>
-            </section>
-
-            {/* MEMBER INFO */}
-
-            <section className="member-mini-card">
-              <div>
-                <span>
-                  MEMBER
-                </span>
-
-                <strong>
-                  {user.email}
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  ROLE
-                </span>
-
-                <strong>
-                  {(
-                    profile?.role ||
-                    "MEMBER"
-                  ).toUpperCase()}
-                </strong>
-              </div>
-
-              <div>
-                <span>
-                  API KEY
-                </span>
-
-                <button
-                  onClick={
-                    copyApiKey
-                  }
-                >
-                  {copied
-                    ? "COPIED"
-                    : "COPY KEY"}
-                </button>
-              </div>
-            </section>
-
-            {/* SEARCH */}
-
-            <section className="search-section">
-              <div className="search-box">
-                <span>
-                  ⌕
-                </span>
-
-                <input
-                  value={search}
-                  onChange={(e) =>
-                    setSearch(
-                      e.target.value
-                    )
-                  }
-                  placeholder="SEARCH ENDPOINT / CATEGORY..."
-                />
-
-                {search && (
+                  {/* CATEGORY HEADER */}
                   <button
+                    className="category-header"
                     onClick={() =>
-                      setSearch(
-                        ""
+                      setOpenCategory(
+                        isCategoryOpen
+                          ? ""
+                          : category.name
                       )
                     }
                   >
-                    ×
-                  </button>
-                )}
-              </div>
-            </section>
-
-            {/* CATEGORIES */}
-
-            <section className="categories">
-              {filteredCategories.map(
-                (category) => (
-                  <section
-                    key={
-                      category.name
-                    }
-                    id={`category-${category.name.toLowerCase()}`}
-                    className={`category-section category-${category.color}`}
-                  >
-                    <div className="category-header">
-                      <div className="category-icon">
-                        {
-                          category.icon
-                        }
+                    <div className="category-title">
+                      <div
+                        className="category-icon"
+                      >
+                        {category.icon}
                       </div>
 
                       <div>
-                        <span>
-                          MODULE
-                        </span>
-
                         <h2>
-                          {
-                            category.name
-                          }
+                          {category.name}
                         </h2>
 
-                        <small>
+                        <p>
                           {
-                            category
-                              .endpoints
+                            category.endpoints
                               .length
                           }{" "}
-                          ENDPOINTS
-                        </small>
+                          API endpoints
+                        </p>
                       </div>
                     </div>
 
+                    <div className="category-meta">
+                      <span className="endpoint-count">
+                        {
+                          category.endpoints
+                            .length
+                        }{" "}
+                        ENDPOINTS
+                      </span>
+
+                      <span className="category-arrow">
+                        ▼
+                      </span>
+                    </div>
+                  </button>
+
+                  {/* ENDPOINTS */}
+                  {isCategoryOpen && (
                     <div className="endpoint-list">
                       {category.endpoints.map(
-                        (
-                          endpoint
-                        ) => (
-                          <div
-                            className="endpoint-card"
-                            key={
+                        (endpoint) => {
+                          const key =
+                            `${category.name}-${endpoint.path}`;
+
+                          const isOpen =
+                            openEndpoint === key;
+
+                          const endpointValues =
+                            values[
                               endpoint.path
-                            }
-                          >
-                            <div className="endpoint-info">
-                              <div className="method">
-                                {
-                                  endpoint.method
-                                }
-                              </div>
+                            ] || {};
 
-                              <div>
-                                <strong>
-                                  {
-                                    endpoint.name
-                                  }
-                                </strong>
+                          const response =
+                            responses[
+                              endpoint.path
+                            ];
 
-                                <code>
-                                  {
-                                    endpoint.path
-                                  }
-                                </code>
+                          const isLoading =
+                            loading[
+                              endpoint.path
+                            ];
 
-                                <p>
-                                  {
-                                    endpoint.description
-                                  }
-                                </p>
-                              </div>
-                            </div>
+                          const requestUrl =
+                            buildUrl(
+                              endpoint.path,
+                              endpointValues
+                            );
 
-                            <button
-                              className="test-button"
-                              onClick={() =>
-                                openTester(
-                                  endpoint
-                                )
-                              }
+                          return (
+                            <div
+                              className={`endpoint-card ${
+                                isOpen
+                                  ? "open"
+                                  : ""
+                              }`}
+                              key={key}
                             >
-                              TEST
-                            </button>
-                          </div>
-                        )
+                              {/* ENDPOINT HEADER */}
+                              <button
+                                className="endpoint-head"
+                                onClick={() =>
+                                  setOpenEndpoint(
+                                    isOpen
+                                      ? null
+                                      : key
+                                  )
+                                }
+                              >
+                                <span className="method-badge">
+                                  {
+                                    endpoint.method
+                                  }
+                                </span>
+
+                                <span className="endpoint-name">
+                                  <strong>
+                                    {
+                                      endpoint.name
+                                    }
+                                  </strong>
+
+                                  <code>
+                                    {
+                                      endpoint.path
+                                    }
+                                  </code>
+                                </span>
+
+                                <span className="endpoint-arrow">
+                                  ▼
+                                </span>
+                              </button>
+
+                              {/* BODY */}
+                              {isOpen && (
+                                <div className="endpoint-body">
+                                  <p className="endpoint-description">
+                                    {
+                                      endpoint.description
+                                    }
+                                  </p>
+
+                                  {/* PARAMETERS */}
+                                  {endpoint.params
+                                    .length >
+                                    0 && (
+                                    <>
+                                      <div className="params-title">
+                                        PARAMETERS
+                                      </div>
+
+                                      <div className="params">
+                                        {endpoint.params.map(
+                                          (
+                                            parameter
+                                          ) => (
+                                            <div
+                                              className="param"
+                                              key={
+                                                parameter.name
+                                              }
+                                            >
+                                              <span className="param-name">
+                                                {
+                                                  parameter.name
+                                                }
+                                              </span>
+
+                                              <span className="param-label">
+                                                {
+                                                  parameter.label
+                                                }
+                                              </span>
+
+                                              {parameter.required && (
+                                                <span className="required">
+                                                  REQUIRED
+                                                </span>
+                                              )}
+
+                                              <input
+                                                type="text"
+                                                placeholder={
+                                                  parameter.placeholder
+                                                }
+                                                value={
+                                                  endpointValues[
+                                                    parameter
+                                                      .name
+                                                  ] ||
+                                                  ""
+                                                }
+                                                onChange={(
+                                                  event
+                                                ) =>
+                                                  updateValue(
+                                                    endpoint.path,
+                                                    parameter.name,
+                                                    event
+                                                      .target
+                                                      .value
+                                                  )
+                                                }
+                                              />
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
+                                    </>
+                                  )}
+
+                                  {/* REQUEST */}
+                                  <div className="request-box">
+                                    <div className="request-title">
+                                      <span>
+                                        REQUEST URL
+                                      </span>
+
+                                      <button
+                                        className="copy-button"
+                                        onClick={() =>
+                                          copyUrl(
+                                            requestUrl
+                                          )
+                                        }
+                                      >
+                                        COPY
+                                      </button>
+                                    </div>
+
+                                    <code>
+                                      {
+                                        requestUrl
+                                      }
+                                    </code>
+                                  </div>
+
+                                  {/* TESTER */}
+                                  <div className="tester">
+                                    <div className="tester-title">
+                                      API TESTER
+                                    </div>
+
+                                    <div className="tester-row">
+                                      <input
+                                        value={
+                                          requestUrl
+                                        }
+                                        readOnly
+                                      />
+
+                                      <button
+                                        className="test-button"
+                                        onClick={() =>
+                                          testEndpoint(
+                                            endpoint
+                                          )
+                                        }
+                                        disabled={
+                                          isLoading
+                                        }
+                                      >
+                                        {isLoading
+                                          ? "LOADING..."
+                                          : "TEST API"}
+                                      </button>
+                                    </div>
+
+                                    {/* RESPONSE */}
+                                    {response && (
+                                      <div className="response-box">
+                                        {response.error ? (
+                                          <pre>
+                                            {JSON.stringify(
+                                              response,
+                                              null,
+                                              2
+                                            )}
+                                          </pre>
+                                        ) : (
+                                          <pre>
+                                            {typeof response.data ===
+                                            "string"
+                                              ? response.data
+                                              : JSON.stringify(
+                                                  {
+                                                    status:
+                                                      response.status,
+                                                    success:
+                                                      response.ok,
+                                                    data: response.data,
+                                                  },
+                                                  null,
+                                                  2
+                                                )}
+                                          </pre>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          );
+                        }
                       )}
                     </div>
-                  </section>
-                )
-              )}
-            </section>
-
-            {filteredCategories.length ===
-              0 && (
-              <div className="empty-state">
-                <h2>
-                  ENDPOINT NOT FOUND
-                </h2>
-
-                <p>
-                  Tidak ada endpoint
-                  yang cocok dengan
-                  pencarian.
-                </p>
-              </div>
-            )}
-          </>
-        )}
-      </main>
-
-      {/* ===================================================
-          API TESTER MODAL
-      =================================================== */}
-
-      {testerOpen &&
-        selectedEndpoint && (
-          <div
-            className="tester-overlay"
-            onClick={closeTester}
-          >
-            <div
-              className="tester-modal"
-              onClick={(e) =>
-                e.stopPropagation()
-              }
-            >
-              <div className="tester-header">
-                <div>
-                  <span>
-                    API TESTER
-                  </span>
-
-                  <h2>
-                    {
-                      selectedEndpoint.name
-                    }
-                  </h2>
-                </div>
-
-                <button
-                  onClick={
-                    closeTester
-                  }
-                >
-                  ×
-                </button>
-              </div>
-
-              <div className="tester-endpoint">
-                <span
-                  className={`method ${selectedEndpoint.method}`}
-                >
-                  {
-                    selectedEndpoint.method
-                  }
-                </span>
-
-                <code>
-                  {
-                    selectedEndpoint.path
-                  }
-                </code>
-              </div>
-
-              {selectedEndpoint
-                .params.length >
-                0 && (
-                <div className="tester-fields">
-                  {selectedEndpoint.params.map(
-                    (param) => (
-                      <div
-                        className="tester-field"
-                        key={
-                          param.name
-                        }
-                      >
-                        <label>
-                          {
-                            param.label
-                          }
-
-                          {param.required && (
-                            <b>
-                              *
-                            </b>
-                          )}
-                        </label>
-
-                        <input
-                          value={
-                            testerValues[
-                              param.name
-                            ] || ""
-                          }
-                          placeholder={
-                            param.placeholder
-                          }
-                          onChange={(
-                            e
-                          ) =>
-                            setTesterValues(
-                              (
-                                old
-                              ) => ({
-                                ...old,
-                                [param.name]:
-                                  e
-                                    .target
-                                    .value,
-                              })
-                            )
-                          }
-                        />
-                      </div>
-                    )
                   )}
-                </div>
-              )}
-
-              <div className="tester-key">
-                <span>
-                  API KEY
-                </span>
-
-                <code>
-                  {profile?.api_key ||
-                    "NOT AVAILABLE"}
-                </code>
-              </div>
-
-              <button
-                className="execute-button"
-                onClick={
-                  executeTest
-                }
-                disabled={
-                  testLoading
-                }
-              >
-                {testLoading
-                  ? "REQUESTING..."
-                  : "EXECUTE REQUEST"}
-              </button>
-
-              {testResponse && (
-                <div className="response-box">
-                  <div className="response-header">
-                    <span>
-                      RESPONSE
-                    </span>
-
-                    {!testResponse.error && (
-                      <b
-                        className={
-                          testResponse.ok
-                            ? "success"
-                            : "failed"
-                        }
-                      >
-                        HTTP{" "}
-                        {
-                          testResponse.status
-                        }
-                      </b>
-                    )}
-                  </div>
-
-                  <pre>
-                    {testResponse.error
-                      ? testResponse.message
-                      : typeof testResponse.data ===
-                          "string"
-                        ? testResponse.data
-                        : JSON.stringify(
-                            testResponse.data,
-                            null,
-                            2
-                          )}
-                  </pre>
-                </div>
-              )}
-            </div>
-          </div>
+                </section>
+              );
+            }
+          )
         )}
+
+        {/* FOOTER */}
+        <footer className="footer">
+          <strong>
+            DIN API🔥
+          </strong>
+
+          <span>
+            Robot System • API Documentation
+            v3.0.0
+          </span>
+        </footer>
+      </main>
     </div>
   );
 }
