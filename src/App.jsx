@@ -1,48 +1,54 @@
 import React, { useEffect, useState } from "react";
-import {
-  BrowserRouter,
-  Routes,
-  Route,
-  Link,
-  Navigate,
-  useNavigate,
-} from "react-router-dom";
-import {
-  LogIn,
-  UserPlus,
-  Mail,
-  Lock,
-  Eye,
-  EyeOff,
-  Chrome,
-  LogOut,
-  Home,
-  ArrowLeft,
-} from "lucide-react";
-
 import { supabase } from "./lib/supabase";
+import "./style.css";
 
-/* =========================================================
-   AUTH HOOK
-========================================================= */
+export default function App() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-function useAuth() {
-  const [user, setUser] = useState(undefined);
+  const [page, setPage] = useState("login");
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const [newPassword, setNewPassword] = useState("");
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setUser(data.session?.user || null);
+    async function getSession() {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (error) {
+        setError(error.message);
       }
-    });
+
+      setSession(data?.session || null);
+      setLoading(false);
+    }
+
+    getSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-    });
+    } = supabase.auth.onAuthStateChange(
+      (_event, currentSession) => {
+        if (!mounted) return;
+
+        setSession(currentSession);
+
+        if (currentSession) {
+          setPage("home");
+        }
+      }
+    );
 
     return () => {
       mounted = false;
@@ -50,570 +56,64 @@ function useAuth() {
     };
   }, []);
 
-  return user;
-}
-
-/* =========================================================
-   LAYOUT
-========================================================= */
-
-function Layout({ children }) {
-  const user = useAuth();
-
-  async function logout() {
-    await supabase.auth.signOut();
+  function clearMessage() {
+    setError("");
+    setMessage("");
   }
 
-  return (
-    <div className="app">
-      <header
-        style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          height: "70px",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "space-between",
-          padding: "0 22px",
-          background: "rgba(7,16,13,.95)",
-          borderBottom: "1px solid #263831",
-          zIndex: 100,
-        }}
-      >
-        <Link
-          to={user ? "/" : "/login"}
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            fontWeight: "800",
-            color: "#fff",
-            textDecoration: "none",
-          }}
-        >
-          <span
-            style={{
-              width: "38px",
-              height: "38px",
-              display: "grid",
-              placeItems: "center",
-              border: "2px solid #5dffb0",
-              borderRadius: "11px",
-              color: "#5dffb0",
-            }}
-          >
-            D
-          </span>
+  async function login() {
+    clearMessage();
 
-          DINSTORE
-          <span style={{ color: "#5dffb0" }}>API</span>
-        </Link>
-
-        {user && (
-          <button
-            onClick={logout}
-            style={{
-              width: "auto",
-              display: "flex",
-              alignItems: "center",
-              gap: "7px",
-              padding: "10px 14px",
-              background: "#111b18",
-              color: "#fff",
-              border: "1px solid #34463f",
-              borderRadius: "10px",
-              cursor: "pointer",
-            }}
-          >
-            <LogOut size={16} />
-            LOGOUT
-          </button>
-        )}
-      </header>
-
-      <main style={{ paddingTop: "70px", minHeight: "100vh" }}>
-        {children}
-      </main>
-    </div>
-  );
-}
-
-/* =========================================================
-   AUTH CARD
-========================================================= */
-
-function AuthCard({ title, subtitle, children }) {
-  return (
-    <div
-      style={{
-        minHeight: "calc(100vh - 70px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "30px 16px",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "430px",
-          padding: "30px",
-          background: "linear-gradient(145deg,#141f1b,#0c1412)",
-          border: "1px solid #354840",
-          borderRadius: "21px",
-          boxShadow: "0 25px 70px rgba(0,0,0,.4)",
-        }}
-      >
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: "28px",
-          }}
-        >
-          <div
-            style={{
-              width: "62px",
-              height: "62px",
-              margin: "0 auto 18px",
-              display: "grid",
-              placeItems: "center",
-              border: "2px solid #5dffb0",
-              borderRadius: "16px",
-              color: "#5dffb0",
-              fontSize: "28px",
-              fontWeight: "800",
-              background: "#13251e",
-            }}
-          >
-            D
-          </div>
-
-          <div
-            style={{
-              fontSize: "11px",
-              letterSpacing: "3px",
-              color: "#72817a",
-              marginBottom: "8px",
-            }}
-          >
-            DINSTORE API
-          </div>
-
-          <h1
-            style={{
-              margin: "0 0 8px",
-              fontSize: "27px",
-            }}
-          >
-            {title}
-          </h1>
-
-          <p
-            style={{
-              margin: 0,
-              color: "#899690",
-              fontSize: "14px",
-            }}
-          >
-            {subtitle}
-          </p>
-        </div>
-
-        {children}
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   FORM COMPONENT
-========================================================= */
-
-function Input({
-  label,
-  type = "text",
-  value,
-  onChange,
-  placeholder,
-  icon: Icon,
-  required = true,
-  minLength,
-  showPassword,
-  onTogglePassword,
-}) {
-  const inputType =
-    type === "password"
-      ? showPassword
-        ? "text"
-        : "password"
-      : type;
-
-  return (
-    <label
-      style={{
-        display: "grid",
-        gap: "7px",
-        color: "#b6c1bd",
-        fontSize: "13px",
-      }}
-    >
-      {label}
-
-      <div
-        style={{
-          position: "relative",
-        }}
-      >
-        {Icon && (
-          <Icon
-            size={17}
-            style={{
-              position: "absolute",
-              left: "13px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              color: "#6f8078",
-            }}
-          />
-        )}
-
-        <input
-          type={inputType}
-          value={value}
-          onChange={onChange}
-          placeholder={placeholder}
-          required={required}
-          minLength={minLength}
-          style={{
-            width: "100%",
-            padding: "13px",
-            paddingLeft: Icon ? "40px" : "13px",
-            paddingRight:
-              type === "password" ? "43px" : "13px",
-            borderRadius: "10px",
-            border: "1px solid #394b43",
-            background: "#09110e",
-            color: "#fff",
-            outline: "none",
-          }}
-        />
-
-        {type === "password" && (
-          <button
-            type="button"
-            onClick={onTogglePassword}
-            style={{
-              position: "absolute",
-              right: "5px",
-              top: "50%",
-              transform: "translateY(-50%)",
-              width: "35px",
-              height: "35px",
-              padding: 0,
-              border: 0,
-              background: "transparent",
-              color: "#899690",
-              cursor: "pointer",
-            }}
-          >
-            {showPassword ? (
-              <EyeOff size={17} />
-            ) : (
-              <Eye size={17} />
-            )}
-          </button>
-        )}
-      </div>
-    </label>
-  );
-}
-
-/* =========================================================
-   MESSAGE
-========================================================= */
-
-function ErrorMessage({ children }) {
-  if (!children) return null;
-
-  return (
-    <div
-      style={{
-        padding: "11px 13px",
-        borderRadius: "9px",
-        fontSize: "13px",
-        background: "#2b1116",
-        color: "#ff9ca4",
-        border: "1px solid #71323b",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-function SuccessMessage({ children }) {
-  if (!children) return null;
-
-  return (
-    <div
-      style={{
-        padding: "11px 13px",
-        borderRadius: "9px",
-        fontSize: "13px",
-        background: "#10271c",
-        color: "#82ffc0",
-        border: "1px solid #2e6d4d",
-      }}
-    >
-      {children}
-    </div>
-  );
-}
-
-/* =========================================================
-   LOGIN
-========================================================= */
-
-function Login() {
-  const navigate = useNavigate();
-
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  async function login(e) {
-    e.preventDefault();
-
-    setError("");
-    setLoading(true);
-
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-    setLoading(false);
-
-    if (error) {
-      setError("Email atau password salah.");
+    if (!email || !password) {
+      setError("Email dan password wajib diisi.");
       return;
     }
 
-    navigate("/");
-  }
+    setBusy(true);
 
-  async function loginGoogle() {
-    setError("");
-    setGoogleLoading(true);
+    const { data, error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
-    const { error } =
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
+    setBusy(false);
 
     if (error) {
-      setGoogleLoading(false);
       setError(error.message);
-    }
-  }
-
-  return (
-    <AuthCard
-      title="LOGIN MEMBER"
-      subtitle="Masuk ke akun DINSTORE API."
-    >
-      <form
-        onSubmit={login}
-        style={{
-          display: "grid",
-          gap: "15px",
-        }}
-      >
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@example.com"
-          icon={Mail}
-        />
-
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="••••••••"
-          icon={Lock}
-          showPassword={showPassword}
-          onTogglePassword={() =>
-            setShowPassword(!showPassword)
-          }
-        />
-
-        <div
-          style={{
-            display: "flex",
-            justifyContent: "flex-end",
-          }}
-        >
-          <Link
-            to="/forgot-password"
-            style={{
-              color: "#5dffb0",
-              fontSize: "13px",
-            }}
-          >
-            Lupa password?
-          </Link>
-        </div>
-
-        <ErrorMessage>{error}</ErrorMessage>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "13px",
-            border: "0",
-            borderRadius: "11px",
-            background: "#5dffb0",
-            color: "#06100b",
-            fontWeight: "800",
-            cursor: "pointer",
-          }}
-        >
-          {loading ? "MEMPROSES..." : "LOGIN"}
-        </button>
-
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            gap: "10px",
-            color: "#56655f",
-            fontSize: "12px",
-          }}
-        >
-          <span
-            style={{
-              flex: 1,
-              height: "1px",
-              background: "#293a33",
-            }}
-          />
-
-          ATAU
-
-          <span
-            style={{
-              flex: 1,
-              height: "1px",
-              background: "#293a33",
-            }}
-          />
-        </div>
-
-        <button
-          type="button"
-          onClick={loginGoogle}
-          disabled={googleLoading}
-          style={{
-            width: "100%",
-            padding: "13px",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            gap: "9px",
-            border: "1px solid #3b4c45",
-            borderRadius: "11px",
-            background: "#151f1c",
-            color: "#fff",
-            cursor: "pointer",
-          }}
-        >
-          <Chrome size={18} />
-
-          {googleLoading
-            ? "MENGHUBUNGKAN..."
-            : "LOGIN DENGAN GOOGLE"}
-        </button>
-
-        <div
-          style={{
-            textAlign: "center",
-            color: "#899690",
-            fontSize: "13px",
-          }}
-        >
-          Belum punya akun?{" "}
-          <Link
-            to="/register"
-            style={{
-              color: "#5dffb0",
-            }}
-          >
-            Daftar
-          </Link>
-        </div>
-      </form>
-    </AuthCard>
-  );
-}
-
-/* =========================================================
-   REGISTER
-========================================================= */
-
-function Register() {
-  const navigate = useNavigate();
-
-  const [name, setName] = useState("");
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  const [showPassword, setShowPassword] = useState(false);
-  const [loading, setLoading] = useState(false);
-
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  async function register(e) {
-    e.preventDefault();
-
-    setError("");
-    setSuccess("");
-
-    if (password.length < 8) {
-      setError("Password minimal 8 karakter.");
       return;
     }
 
-    setLoading(true);
+    setSession(data.session);
+    setPage("home");
+  }
 
-    const { data, error } =
-      await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-          },
+  async function register() {
+    clearMessage();
+
+    if (!name || !email || !password) {
+      setError("Nama, email, dan password wajib diisi.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError("Password minimal 6 karakter.");
+      return;
+    }
+
+    setBusy(true);
+
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          full_name: name,
+          name: name,
         },
-      });
+      },
+    });
 
-    setLoading(false);
+    setBusy(false);
 
     if (error) {
       setError(error.message);
@@ -621,497 +121,629 @@ function Register() {
     }
 
     if (data.session) {
-      navigate("/");
-      return;
-    }
-
-    setSuccess(
-      "Akun berhasil dibuat. Silakan cek email untuk verifikasi jika verifikasi email aktif."
-    );
-  }
-
-  return (
-    <AuthCard
-      title="DAFTAR MEMBER"
-      subtitle="Buat akun DINSTORE API."
-    >
-      <form
-        onSubmit={register}
-        style={{
-          display: "grid",
-          gap: "15px",
-        }}
-      >
-        <Input
-          label="Nama"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="Nama kamu"
-          icon={UserPlus}
-        />
-
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@example.com"
-          icon={Mail}
-        />
-
-        <Input
-          label="Password"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Minimal 8 karakter"
-          icon={Lock}
-          minLength={8}
-          showPassword={showPassword}
-          onTogglePassword={() =>
-            setShowPassword(!showPassword)
-          }
-        />
-
-        <ErrorMessage>{error}</ErrorMessage>
-
-        <SuccessMessage>{success}</SuccessMessage>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "13px",
-            border: "0",
-            borderRadius: "11px",
-            background: "#5dffb0",
-            color: "#06100b",
-            fontWeight: "800",
-            cursor: "pointer",
-          }}
-        >
-          {loading
-            ? "MEMBUAT AKUN..."
-            : "CREATE ACCOUNT"}
-        </button>
-
-        <div
-          style={{
-            textAlign: "center",
-            color: "#899690",
-            fontSize: "13px",
-          }}
-        >
-          Sudah punya akun?{" "}
-          <Link
-            to="/login"
-            style={{
-              color: "#5dffb0",
-            }}
-          >
-            Login
-          </Link>
-        </div>
-      </form>
-    </AuthCard>
-  );
-}
-
-/* =========================================================
-   FORGOT PASSWORD
-========================================================= */
-
-function ForgotPassword() {
-  const [email, setEmail] = useState("");
-  const [loading, setLoading] = useState(false);
-
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  async function sendReset(e) {
-    e.preventDefault();
-
-    setError("");
-    setSuccess("");
-    setLoading(true);
-
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        email,
-        {
-          redirectTo:
-            window.location.origin +
-            "/reset-password",
-        }
+      setSession(data.session);
+      setPage("home");
+    } else {
+      setMessage(
+        "Pendaftaran berhasil. Silakan login menggunakan akun yang sudah dibuat."
       );
+      setPage("login");
+    }
+  }
 
-    setLoading(false);
+  async function loginGoogle() {
+    clearMessage();
+    setBusy(true);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      setBusy(false);
+      setError(error.message);
+    }
+  }
+
+  async function forgotPassword() {
+    clearMessage();
+
+    if (!email) {
+      setError("Masukkan email terlebih dahulu.");
+      return;
+    }
+
+    setBusy(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin,
+    });
+
+    setBusy(false);
 
     if (error) {
       setError(error.message);
       return;
     }
 
-    setSuccess(
-      "Link reset password sudah dikirim ke email."
+    setMessage(
+      "Link reset password sudah dikirim. Silakan cek email kamu."
     );
   }
 
-  return (
-    <AuthCard
-      title="LUPA PASSWORD"
-      subtitle="Masukkan email untuk mendapatkan link reset."
-    >
-      <form
-        onSubmit={sendReset}
-        style={{
-          display: "grid",
-          gap: "15px",
-        }}
-      >
-        <Input
-          label="Email"
-          type="email"
-          value={email}
-          onChange={(e) => setEmail(e.target.value)}
-          placeholder="email@example.com"
-          icon={Mail}
-        />
+  async function updatePassword() {
+    clearMessage();
 
-        <ErrorMessage>{error}</ErrorMessage>
-
-        <SuccessMessage>{success}</SuccessMessage>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "13px",
-            border: "0",
-            borderRadius: "11px",
-            background: "#5dffb0",
-            color: "#06100b",
-            fontWeight: "800",
-            cursor: "pointer",
-          }}
-        >
-          {loading
-            ? "MENGIRIM..."
-            : "KIRIM RESET PASSWORD"}
-        </button>
-
-        <Link
-          to="/login"
-          style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
-            gap: "6px",
-            color: "#5dffb0",
-            fontSize: "13px",
-          }}
-        >
-          <ArrowLeft size={15} />
-          Kembali ke Login
-        </Link>
-      </form>
-    </AuthCard>
-  );
-}
-
-/* =========================================================
-   RESET PASSWORD
-========================================================= */
-
-function ResetPassword() {
-  const navigate = useNavigate();
-
-  const [password, setPassword] = useState("");
-  const [showPassword, setShowPassword] = useState(false);
-
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-
-  async function reset(e) {
-    e.preventDefault();
-
-    setError("");
-    setSuccess("");
-
-    if (password.length < 8) {
-      setError("Password minimal 8 karakter.");
+    if (!newPassword) {
+      setError("Masukkan password baru.");
       return;
     }
 
-    setLoading(true);
+    if (newPassword.length < 6) {
+      setError("Password minimal 6 karakter.");
+      return;
+    }
 
-    const { error } =
-      await supabase.auth.updateUser({
-        password,
-      });
+    setBusy(true);
 
-    setLoading(false);
+    const { error } = await supabase.auth.updateUser({
+      password: newPassword,
+    });
+
+    setBusy(false);
 
     if (error) {
       setError(error.message);
       return;
     }
 
-    setSuccess(
-      "Password berhasil diubah. Silakan login kembali."
-    );
+    setNewPassword("");
+    setMessage("Password berhasil diubah.");
 
     setTimeout(() => {
-      navigate("/login");
-    }, 1500);
+      setPage("home");
+    }, 1000);
   }
 
-  return (
-    <AuthCard
-      title="RESET PASSWORD"
-      subtitle="Buat password baru untuk akun kamu."
-    >
-      <form
-        onSubmit={reset}
-        style={{
-          display: "grid",
-          gap: "15px",
-        }}
-      >
-        <Input
-          label="Password Baru"
-          type="password"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          placeholder="Minimal 8 karakter"
-          icon={Lock}
-          minLength={8}
-          showPassword={showPassword}
-          onTogglePassword={() =>
-            setShowPassword(!showPassword)
-          }
-        />
+  async function logout() {
+    await supabase.auth.signOut();
 
-        <ErrorMessage>{error}</ErrorMessage>
+    setSession(null);
+    setEmail("");
+    setPassword("");
+    setPage("login");
+  }
 
-        <SuccessMessage>{success}</SuccessMessage>
-
-        <button
-          type="submit"
-          disabled={loading}
-          style={{
-            width: "100%",
-            padding: "13px",
-            border: "0",
-            borderRadius: "11px",
-            background: "#5dffb0",
-            color: "#06100b",
-            fontWeight: "800",
-            cursor: "pointer",
-          }}
-        >
-          {loading
-            ? "MENYIMPAN..."
-            : "SIMPAN PASSWORD"}
-        </button>
-      </form>
-    </AuthCard>
-  );
-}
-
-/* =========================================================
-   HOME
-========================================================= */
-
-function HomePage() {
-  const user = useAuth();
-
-  return (
-    <div
-      style={{
-        minHeight: "calc(100vh - 70px)",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        padding: "30px",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "850px",
-          textAlign: "center",
-        }}
-      >
-        <div
-          style={{
-            display: "inline-block",
-            padding: "9px 15px",
-            border: "1px solid #315342",
-            borderRadius: "999px",
-            background: "#102019",
-            color: "#5dffb0",
-            fontSize: "11px",
-            letterSpacing: "2px",
-          }}
-        >
-          ● SYSTEM ONLINE
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="loading-screen">
+          <div className="spinner"></div>
+          <p>Memuat DINSTORE...</p>
         </div>
+      </div>
+    );
+  }
 
-        <h1
-          style={{
-            margin: "25px 0 12px",
-            fontSize: "clamp(42px,8vw,80px)",
-            letterSpacing: "-4px",
-          }}
-        >
-          DINSTORE{" "}
-          <span style={{ color: "#5dffb0" }}>
-            API
-          </span>
-        </h1>
+  /*
+   * HALAMAN RESET PASSWORD
+   */
+  if (
+    window.location.hash.includes("access_token") &&
+    !session
+  ) {
+    return (
+      <div className="app">
+        <div className="auth-container">
+          <div className="auth-card">
+            <div className="logo">D</div>
 
-        <p
-          style={{
-            maxWidth: "650px",
-            margin: "0 auto 30px",
-            color: "#899690",
-            fontSize: "17px",
-            lineHeight: "1.7",
-          }}
-        >
-          Selamat datang di DINSTORE API.
-          Sistem authentication berhasil terhubung
-          dengan Supabase.
-        </p>
+            <h1>Password Baru</h1>
 
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: "8px",
-            padding: "13px 17px",
-            borderRadius: "12px",
-            background: "#111b18",
-            border: "1px solid #34463f",
-            color: "#b8c4be",
-            fontSize: "13px",
-          }}
-        >
-          <Home size={16} color="#5dffb0" />
+            <p className="subtitle">
+              Masukkan password baru untuk akun kamu.
+            </p>
 
-          Login sebagai:
-          <strong style={{ color: "#5dffb0" }}>
-            {user?.email || "Member"}
-          </strong>
+            {error && (
+              <div className="alert error">
+                {error}
+              </div>
+            )}
+
+            {message && (
+              <div className="alert success">
+                {message}
+              </div>
+            )}
+
+            <div className="form-group">
+              <label>Password Baru</label>
+
+              <input
+                type="password"
+                placeholder="Minimal 6 karakter"
+                value={newPassword}
+                onChange={(e) =>
+                  setNewPassword(e.target.value)
+                }
+              />
+            </div>
+
+            <button
+              className="primary-button"
+              onClick={updatePassword}
+              disabled={busy}
+            >
+              {busy ? "Memproses..." : "Ubah Password"}
+            </button>
+
+            <button
+              className="text-button"
+              onClick={() => setPage("login")}
+            >
+              Kembali ke Login
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * JIKA SUDAH LOGIN
+   */
+  if (session) {
+    const user = session.user;
+
+    const fullName =
+      user.user_metadata?.full_name ||
+      user.user_metadata?.name ||
+      user.email?.split("@")[0] ||
+      "User";
+
+    return (
+      <div className="app">
+        <header className="navbar">
+          <div className="brand">
+            <div className="brand-logo">D</div>
+
+            <div>
+              <strong>DINSTORE</strong>
+              <small>API PLATFORM</small>
+            </div>
+          </div>
+
+          <button
+            className="logout-button"
+            onClick={logout}
+          >
+            Logout
+          </button>
+        </header>
+
+        <main className="dashboard">
+          <section className="hero-card">
+            <div className="hero-content">
+              <div className="online-badge">
+                <span></span>
+                SYSTEM ONLINE
+              </div>
+
+              <h1>
+                Selamat datang,
+                <br />
+                <span>{fullName}</span>
+              </h1>
+
+              <p>
+                DINSTORE API siap digunakan.
+                Kelola layanan API kamu dari satu tempat.
+              </p>
+
+              <div className="user-email">
+                {user.email}
+              </div>
+            </div>
+
+            <div className="hero-logo">
+              D
+            </div>
+          </section>
+
+          <section className="stats-grid">
+            <div className="stat-card">
+              <div className="stat-icon">⚡</div>
+
+              <div>
+                <span>Status</span>
+                <strong>Online</strong>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">🔐</div>
+
+              <div>
+                <span>Authentication</span>
+                <strong>Verified</strong>
+              </div>
+            </div>
+
+            <div className="stat-card">
+              <div className="stat-icon">🚀</div>
+
+              <div>
+                <span>API</span>
+                <strong>Ready</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="content-card">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">
+                  DINSTORE API
+                </span>
+
+                <h2>Dashboard</h2>
+              </div>
+
+              <div className="status-dot">
+                ONLINE
+              </div>
+            </div>
+
+            <p>
+              Kamu sudah berhasil login.
+              Halaman utama DINSTORE sekarang dapat
+              diakses.
+            </p>
+
+            <div className="api-box">
+              <div>
+                <span>API STATUS</span>
+                <strong>Operational</strong>
+              </div>
+
+              <div>
+                <span>ACCOUNT</span>
+                <strong>{user.email}</strong>
+              </div>
+            </div>
+          </section>
+
+          <section className="content-card">
+            <div className="section-header">
+              <div>
+                <span className="eyebrow">
+                  QUICK ACCESS
+                </span>
+
+                <h2>Layanan</h2>
+              </div>
+            </div>
+
+            <div className="service-grid">
+              <div className="service-card">
+                <div className="service-icon">
+                  API
+                </div>
+
+                <h3>API Tester</h3>
+
+                <p>
+                  Test endpoint API DINSTORE.
+                </p>
+
+                <button
+                  onClick={() =>
+                    alert("API Tester akan tersedia pada tahap berikutnya.")
+                  }
+                >
+                  Buka
+                </button>
+              </div>
+
+              <div className="service-card">
+                <div className="service-icon">
+                  DOC
+                </div>
+
+                <h3>Documentation</h3>
+
+                <p>
+                  Lihat dokumentasi API.
+                </p>
+
+                <button
+                  onClick={() =>
+                    alert("Documentation akan tersedia pada tahap berikutnya.")
+                  }
+                >
+                  Buka
+                </button>
+              </div>
+
+              <div className="service-card">
+                <div className="service-icon">
+                  KEY
+                </div>
+
+                <h3>API Key</h3>
+
+                <p>
+                  Kelola API key akun kamu.
+                </p>
+
+                <button
+                  onClick={() =>
+                    alert("API Key akan tersedia pada tahap berikutnya.")
+                  }
+                >
+                  Kelola
+                </button>
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <footer>
+          <strong>DINSTORE API</strong>
+          <span>© 2026 DINSTORE. All rights reserved.</span>
+        </footer>
+      </div>
+    );
+  }
+
+  /*
+   * HALAMAN AUTH
+   */
+
+  return (
+    <div className="app">
+      <div className="auth-container">
+        <div className="auth-card">
+          <div className="logo">
+            D
+          </div>
+
+          <h1>DINSTORE API</h1>
+
+          <p className="subtitle">
+            {page === "register"
+              ? "Buat akun baru"
+              : page === "forgot"
+              ? "Reset password akun"
+              : "Login untuk melanjutkan"}
+          </p>
+
+          {error && (
+            <div className="alert error">
+              {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="alert success">
+              {message}
+            </div>
+          )}
+
+          {page === "login" && (
+            <>
+              <button
+                className="google-button"
+                onClick={loginGoogle}
+                disabled={busy}
+              >
+                <span className="google-icon">
+                  G
+                </span>
+
+                {busy
+                  ? "Menghubungkan..."
+                  : "Login dengan Google"}
+              </button>
+
+              <div className="divider">
+                <span>atau</span>
+              </div>
+
+              <div className="form-group">
+                <label>Email</label>
+
+                <input
+                  type="email"
+                  placeholder="nama@email.com"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password</label>
+
+                <input
+                  type="password"
+                  placeholder="Masukkan password"
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") {
+                      login();
+                    }
+                  }}
+                />
+              </div>
+
+              <div className="forgot-row">
+                <button
+                  className="link-button"
+                  onClick={() => {
+                    clearMessage();
+                    setPage("forgot");
+                  }}
+                >
+                  Lupa Password?
+                </button>
+              </div>
+
+              <button
+                className="primary-button"
+                onClick={login}
+                disabled={busy}
+              >
+                {busy ? "Login..." : "Login"}
+              </button>
+
+              <p className="switch-text">
+                Belum punya akun?
+                <button
+                  className="link-button inline"
+                  onClick={() => {
+                    clearMessage();
+                    setPage("register");
+                  }}
+                >
+                  Daftar sekarang
+                </button>
+              </p>
+            </>
+          )}
+
+          {page === "register" && (
+            <>
+              <div className="form-group">
+                <label>Nama</label>
+
+                <input
+                  type="text"
+                  placeholder="Nama lengkap"
+                  value={name}
+                  onChange={(e) =>
+                    setName(e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Email</label>
+
+                <input
+                  type="email"
+                  placeholder="nama@email.com"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                />
+              </div>
+
+              <div className="form-group">
+                <label>Password</label>
+
+                <input
+                  type="password"
+                  placeholder="Minimal 6 karakter"
+                  value={password}
+                  onChange={(e) =>
+                    setPassword(e.target.value)
+                  }
+                />
+              </div>
+
+              <button
+                className="primary-button"
+                onClick={register}
+                disabled={busy}
+              >
+                {busy
+                  ? "Membuat akun..."
+                  : "Daftar"}
+              </button>
+
+              <div className="divider">
+                <span>atau</span>
+              </div>
+
+              <button
+                className="google-button"
+                onClick={loginGoogle}
+                disabled={busy}
+              >
+                <span className="google-icon">
+                  G
+                </span>
+
+                Daftar dengan Google
+              </button>
+
+              <p className="switch-text">
+                Sudah punya akun?
+                <button
+                  className="link-button inline"
+                  onClick={() => {
+                    clearMessage();
+                    setPage("login");
+                  }}
+                >
+                  Login
+                </button>
+              </p>
+            </>
+          )}
+
+          {page === "forgot" && (
+            <>
+              <div className="form-group">
+                <label>Email</label>
+
+                <input
+                  type="email"
+                  placeholder="nama@email.com"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                />
+              </div>
+
+              <button
+                className="primary-button"
+                onClick={forgotPassword}
+                disabled={busy}
+              >
+                {busy
+                  ? "Mengirim..."
+                  : "Kirim Link Reset"}
+              </button>
+
+              <button
+                className="text-button"
+                onClick={() => {
+                  clearMessage();
+                  setPage("login");
+                }}
+              >
+                ← Kembali ke Login
+              </button>
+            </>
+          )}
+
+          <div className="auth-footer">
+            <span>DINSTORE API</span>
+            <span>Secure Authentication</span>
+          </div>
         </div>
       </div>
     </div>
-  );
-}
-
-/* =========================================================
-   PROTECTED ROUTE
-========================================================= */
-
-function ProtectedRoute({ children }) {
-  const user = useAuth();
-
-  if (user === undefined) {
-    return (
-      <div
-        style={{
-          minHeight: "calc(100vh - 70px)",
-          display: "grid",
-          placeItems: "center",
-          color: "#5dffb0",
-        }}
-      >
-        MEMUAT...
-      </div>
-    );
-  }
-
-  if (!user) {
-    return <Navigate to="/login" replace />;
-  }
-
-  return children;
-}
-
-/* =========================================================
-   APP
-========================================================= */
-
-function AppRoutes() {
-  const user = useAuth();
-
-  return (
-    <Layout>
-      <Routes>
-        {/* Belum login */}
-        <Route
-          path="/login"
-          element={
-            user ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Login />
-            )
-          }
-        />
-
-        <Route
-          path="/register"
-          element={
-            user ? (
-              <Navigate to="/" replace />
-            ) : (
-              <Register />
-            )
-          }
-        />
-
-        <Route
-          path="/forgot-password"
-          element={<ForgotPassword />}
-        />
-
-        <Route
-          path="/reset-password"
-          element={<ResetPassword />}
-        />
-
-        {/* Halaman utama hanya setelah login */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <HomePage />
-            </ProtectedRoute>
-          }
-        />
-
-        <Route
-          path="*"
-          element={<Navigate to="/" replace />}
-        />
-      </Routes>
-    </Layout>
-  );
-}
-
-/* =========================================================
-   EXPORT
-========================================================= */
-
-export default function App() {
-  return (
-    <BrowserRouter>
-      <AppRoutes />
-    </BrowserRouter>
   );
 }
