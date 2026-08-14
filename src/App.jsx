@@ -1,8 +1,10 @@
 import React from "react";
+
 import {
   BrowserRouter,
   Routes,
-  Route
+  Route,
+  Navigate
 } from "react-router-dom";
 
 import Login from "./pages/Login";
@@ -14,7 +16,10 @@ import ConnectAPI from "./pages/ConnectAPI";
 export default function App() {
   return (
     <BrowserRouter>
+
       <Routes>
+
+        {/* AUTH */}
 
         <Route
           path="/login"
@@ -31,6 +36,9 @@ export default function App() {
           element={<ForgotPassword />}
         />
 
+
+        {/* DASHBOARD */}
+
         <Route
           path="/dashboard"
           element={<Dashboard />}
@@ -41,12 +49,31 @@ export default function App() {
           element={<ConnectAPI />}
         />
 
+
+        {/* DEFAULT */}
+
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
+
         <Route
           path="*"
-          element={<Login />}
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
         />
 
       </Routes>
+
     </BrowserRouter>
   );
 }
