@@ -1,15 +1,199 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { supabase } from "./lib/supabase";
 
 export default function App() {
   const [page, setPage] = useState("login");
 
-  if (page === "register") {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  const [user, setUser] = useState(null);
+
+  /*
+   * CEK SESSION SAAT WEBSITE DIBUKA
+   */
+
+  useEffect(() => {
+    checkSession();
+
+    if (!supabase) {
+      setChecking(false);
+      return;
+    }
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        setUser(session?.user || null);
+
+        if (session?.user) {
+          setPage("dashboard");
+        }
+      }
+    );
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  async function checkSession() {
+    try {
+      if (!supabase) {
+        setError(
+          "Supabase belum dikonfigurasi."
+        );
+        setChecking(false);
+        return;
+      }
+
+      const {
+        data,
+        error: sessionError,
+      } = await supabase.auth.getSession();
+
+      if (sessionError) {
+        setError(sessionError.message);
+        setChecking(false);
+        return;
+      }
+
+      if (data.session?.user) {
+        setUser(data.session.user);
+        setPage("dashboard");
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+
+    setChecking(false);
+  }
+
+  /*
+   * LOGIN SUPABASE
+   */
+
+  async function handleLogin(e) {
+    e.preventDefault();
+
+    setError("");
+    setMessage("");
+
+    if (!email.trim()) {
+      setError("Email wajib diisi.");
+      return;
+    }
+
+    if (!password) {
+      setError("Password wajib diisi.");
+      return;
+    }
+
+    if (!supabase) {
+      setError(
+        "Supabase belum dikonfigurasi."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const {
+        data,
+        error: loginError,
+      } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (loginError) {
+        setError(
+          loginError.message ===
+            "Invalid login credentials"
+            ? "Email atau password salah."
+            : loginError.message
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      if (data.user) {
+        setUser(data.user);
+        setPage("dashboard");
+      }
+    } catch (err) {
+      setError(err.message);
+    }
+
+    setLoading(false);
+  }
+
+  /*
+   * LOGOUT
+   */
+
+  async function handleLogout() {
+    if (!supabase) return;
+
+    await supabase.auth.signOut();
+
+    setUser(null);
+    setEmail("");
+    setPassword("");
+    setMessage("");
+    setError("");
+    setPage("login");
+  }
+
+  /*
+   * LOADING SESSION
+   */
+
+  if (checking) {
     return (
       <div style={styles.page}>
         <div style={styles.card}>
           <div style={styles.logo}>D</div>
 
-          <h1>DAFTAR MEMBER</h1>
+          <h1>DINSTORE API</h1>
+
+          <p>
+            Memeriksa session...
+          </p>
+
+          <div style={styles.loading}>
+            LOADING...
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * REGISTER
+   */
+
+  if (page === "register") {
+    return (
+      <div style={styles.page}>
+        <div style={styles.card}>
+
+          <div style={styles.logo}>
+            D
+          </div>
+
+          <h1>
+            DAFTAR MEMBER
+          </h1>
 
           <p>
             Buat akun DINSTORE API
@@ -36,7 +220,9 @@ export default function App() {
           <button
             style={styles.button}
             onClick={() =>
-              alert("Fitur daftar akan kita pasang berikutnya.")
+              alert(
+                "Fitur daftar kita pasang pada tahap berikutnya."
+              )
             }
           >
             DAFTAR
@@ -44,22 +230,36 @@ export default function App() {
 
           <button
             style={styles.link}
-            onClick={() => setPage("login")}
+            onClick={() => {
+              setError("");
+              setMessage("");
+              setPage("login");
+            }}
           >
             ← Kembali ke Login
           </button>
+
         </div>
       </div>
     );
   }
 
+  /*
+   * FORGOT PASSWORD
+   */
+
   if (page === "forgot") {
     return (
       <div style={styles.page}>
         <div style={styles.card}>
-          <div style={styles.logo}>D</div>
 
-          <h1>LUPA PASSWORD</h1>
+          <div style={styles.logo}>
+            D
+          </div>
+
+          <h1>
+            LUPA PASSWORD
+          </h1>
 
           <p>
             Masukkan email untuk reset password.
@@ -74,7 +274,9 @@ export default function App() {
           <button
             style={styles.button}
             onClick={() =>
-              alert("Fitur reset password akan kita pasang berikutnya.")
+              alert(
+                "Fitur reset password kita pasang pada tahap berikutnya."
+              )
             }
           >
             KIRIM LINK
@@ -82,14 +284,82 @@ export default function App() {
 
           <button
             style={styles.link}
-            onClick={() => setPage("login")}
+            onClick={() => {
+              setError("");
+              setMessage("");
+              setPage("login");
+            }}
           >
             ← Kembali ke Login
           </button>
+
         </div>
       </div>
     );
   }
+
+  /*
+   * DASHBOARD SETELAH LOGIN
+   */
+
+  if (page === "dashboard" && user) {
+    return (
+      <div style={styles.page}>
+        <div style={styles.card}>
+
+          <div style={styles.logo}>
+            D
+          </div>
+
+          <div style={styles.online}>
+            <span />
+            SYSTEM ONLINE
+          </div>
+
+          <h1>
+            DINSTORE API
+          </h1>
+
+          <p>
+            Login berhasil.
+          </p>
+
+          <div style={styles.userBox}>
+            <small>
+              LOGIN SEBAGAI
+            </small>
+
+            <strong>
+              {user.email}
+            </strong>
+          </div>
+
+          <button
+            style={styles.button}
+            onClick={() =>
+              alert(
+                "Dashboard akan kita buat pada tahap berikutnya."
+              )
+            }
+          >
+            DASHBOARD
+          </button>
+
+          <button
+            style={styles.logout}
+            onClick={handleLogout}
+          >
+            LOGOUT
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+  /*
+   * LOGIN
+   */
 
   return (
     <div style={styles.page}>
@@ -107,55 +377,105 @@ export default function App() {
           Member Login
         </p>
 
+
+        {error && (
+          <div style={styles.error}>
+            {error}
+          </div>
+        )}
+
+
+        {message && (
+          <div style={styles.success}>
+            {message}
+          </div>
+        )}
+
+
         <button
           style={styles.google}
           onClick={() =>
-            alert("Google Login akan kita pasang setelah versi tes berhasil.")
+            alert(
+              "Google Login kita aktifkan setelah Login Email berhasil."
+            )
           }
+          type="button"
         >
           <b>G</b>
           LOGIN DENGAN GOOGLE
         </button>
 
+
         <div style={styles.divider}>
           ATAU
         </div>
 
-        <input
-          style={styles.input}
-          type="email"
-          placeholder="Email"
-        />
 
-        <input
-          style={styles.input}
-          type="password"
-          placeholder="Password"
-        />
+        <form onSubmit={handleLogin}>
 
-        <button
-          style={styles.button}
-          onClick={() =>
-            alert("Login test berhasil!")
-          }
-        >
-          LOGIN
-        </button>
+          <input
+            style={styles.input}
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={(e) =>
+              setEmail(e.target.value)
+            }
+            autoComplete="email"
+          />
+
+          <input
+            style={styles.input}
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
+            autoComplete="current-password"
+          />
+
+
+          <button
+            type="submit"
+            style={{
+              ...styles.button,
+              opacity: loading ? 0.6 : 1,
+            }}
+            disabled={loading}
+          >
+            {loading
+              ? "MEMPROSES..."
+              : "LOGIN"}
+          </button>
+
+        </form>
+
 
         <button
           style={styles.link}
-          onClick={() => setPage("forgot")}
+          onClick={() => {
+            setError("");
+            setMessage("");
+            setPage("forgot");
+          }}
         >
           Lupa Password?
         </button>
+
 
         <div style={styles.bottom}>
           Belum punya akun?
         </div>
 
+
         <button
           style={styles.register}
-          onClick={() => setPage("register")}
+          onClick={() => {
+            setError("");
+            setMessage("");
+            setPage("register");
+          }}
         >
           DAFTAR AKUN
         </button>
@@ -164,6 +484,11 @@ export default function App() {
     </div>
   );
 }
+
+
+/*
+ * STYLE
+ */
 
 const styles = {
   page: {
@@ -203,10 +528,6 @@ const styles = {
     fontSize: "28px",
     fontWeight: "900",
     marginBottom: "22px",
-  },
-
-  h1: {
-    fontSize: "28px",
   },
 
   input: {
@@ -280,5 +601,64 @@ const styles = {
     color: "#777777",
     fontSize: "13px",
     marginTop: "25px",
+  },
+
+  error: {
+    background: "#351414",
+    border: "1px solid #6b2424",
+    color: "#ff8f8f",
+    padding: "11px",
+    borderRadius: "9px",
+    fontSize: "13px",
+    marginTop: "15px",
+  },
+
+  success: {
+    background: "#12351f",
+    border: "1px solid #245d37",
+    color: "#8ff0aa",
+    padding: "11px",
+    borderRadius: "9px",
+    fontSize: "13px",
+    marginTop: "15px",
+  },
+
+  loading: {
+    marginTop: "20px",
+    color: "#888888",
+    fontSize: "13px",
+    letterSpacing: "2px",
+  },
+
+  online: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    color: "#7cff9b",
+    fontSize: "12px",
+    marginBottom: "15px",
+  },
+
+  userBox: {
+    marginTop: "20px",
+    background: "#080808",
+    border: "1px solid #292929",
+    borderRadius: "10px",
+    padding: "15px",
+    display: "flex",
+    flexDirection: "column",
+    gap: "7px",
+  },
+
+  logout: {
+    width: "100%",
+    border: "1px solid #3b2020",
+    background: "#160b0b",
+    color: "#ff8d8d",
+    padding: "13px",
+    borderRadius: "10px",
+    marginTop: "10px",
+    fontWeight: "700",
+    cursor: "pointer",
   },
 };
