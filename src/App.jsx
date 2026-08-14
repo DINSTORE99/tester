@@ -1,80 +1,212 @@
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-import "./style.css";
+import React, { useEffect, useState } from "react";
+import {
+  BrowserRouter,
+  Routes,
+  Route,
+  Navigate,
+  Link,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+
+import {
+  Menu,
+  X,
+  Home as HomeIcon,
+  Sparkles,
+  Shield,
+  Database,
+  Download,
+  Wrench,
+  Search,
+  LogIn,
+  UserPlus,
+  LogOut,
+  User,
+  Mail,
+  Lock,
+  Eye,
+  EyeOff,
+  ArrowRight,
+  KeyRound,
+  Copy,
+  Check,
+  LayoutDashboard,
+  Globe,
+  Zap,
+  ShieldCheck,
+} from "lucide-react";
+
+import { supabase } from "./lib/supabase";
 
 /* =========================================================
-   SUPABASE
+   DATA
 ========================================================= */
 
-const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const categories = [
+  {
+    id: "ai",
+    name: "AI",
+    icon: Sparkles,
+    description: "Artificial Intelligence API",
+  },
+  {
+    id: "admin",
+    name: "ADMIN",
+    icon: Shield,
+    description: "System & member API",
+  },
+  {
+    id: "cache",
+    name: "CACHE",
+    icon: Database,
+    description: "Cache management API",
+  },
+  {
+    id: "download",
+    name: "DOWNLOAD",
+    icon: Download,
+    description: "Downloader API",
+  },
+  {
+    id: "tools",
+    name: "TOOLS",
+    icon: Wrench,
+    description: "Utility tools API",
+  },
+];
 
-const supabase =
-  SUPABASE_URL && SUPABASE_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_KEY)
-    : null;
+const endpoints = [
+  {
+    category: "ai",
+    name: "AI Aiko",
+    path: "/api/ai/aiko",
+    description: "AI conversation endpoint.",
+  },
+  {
+    category: "ai",
+    name: "AI Lyrics Generator",
+    path: "/api/ai/lyricsgen",
+    description: "Generate lyrics using AI.",
+  },
+  {
+    category: "ai",
+    name: "AI Coder",
+    path: "/api/tools/aicoder",
+    description: "AI coding assistant endpoint.",
+  },
+  {
+    category: "ai",
+    name: "Text To Image",
+    path: "/api/ai/text2img",
+    description: "Generate images from text prompts.",
+  },
+  {
+    category: "admin",
+    name: "Health",
+    path: "/api/health",
+    description: "Check API server status.",
+  },
+  {
+    category: "admin",
+    name: "Profile",
+    path: "/api/me",
+    description: "Get authenticated member profile.",
+  },
+  {
+    category: "cache",
+    name: "Cache Status",
+    path: "/api/cache/status",
+    description: "Check cache status.",
+  },
+  {
+    category: "cache",
+    name: "Cache Stats",
+    path: "/api/cache/stats",
+    description: "View cache statistics.",
+  },
+  {
+    category: "cache",
+    name: "Cache Clear",
+    path: "/api/cache/clear",
+    description: "Clear API cache.",
+  },
+  {
+    category: "download",
+    name: "TikTok",
+    path: "/api/download/tiktok",
+    description: "TikTok downloader endpoint.",
+  },
+  {
+    category: "download",
+    name: "Instagram",
+    path: "/api/download/instagram",
+    description: "Instagram downloader endpoint.",
+  },
+  {
+    category: "download",
+    name: "YouTube",
+    path: "/api/download/youtube",
+    description: "YouTube downloader endpoint.",
+  },
+  {
+    category: "download",
+    name: "Pinterest",
+    path: "/api/download/pinterest",
+    description: "Pinterest downloader endpoint.",
+  },
+  {
+    category: "download",
+    name: "Spotify",
+    path: "/api/download/spotify",
+    description: "Spotify downloader endpoint.",
+  },
+  {
+    category: "tools",
+    name: "QRIS Generator",
+    path: "/api/tools/qrisgen",
+    description: "Generate QRIS data.",
+  },
+  {
+    category: "tools",
+    name: "Short URL",
+    path: "/api/tools/shorturl",
+    description: "Create short URLs.",
+  },
+  {
+    category: "tools",
+    name: "Screenshot",
+    path: "/api/tools/screenshot",
+    description: "Website screenshot API.",
+  },
+  {
+    category: "tools",
+    name: "IP Info",
+    path: "/api/tools/ipinfo",
+    description: "Get IP information.",
+  },
+];
 
 /* =========================================================
-   APP
+   AUTH HOOK
 ========================================================= */
 
-export default function App() {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-
-  const [page, setPage] = useState("login");
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  /* -------------------------------------------------------
-     CEK SESSION
-  ------------------------------------------------------- */
+function useAuth() {
+  const [user, setUser] = useState(undefined);
 
   useEffect(() => {
-    if (!supabase) {
-      setLoading(false);
-      return;
-    }
-
     let mounted = true;
 
-    const getSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-
-      if (!mounted) return;
-
-      if (error) {
-        setError(error.message);
+    supabase.auth.getSession().then(({ data }) => {
+      if (mounted) {
+        setUser(data.session?.user ?? null);
       }
-
-      setSession(data?.session || null);
-      setLoading(false);
-    };
-
-    getSession();
+    });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, currentSession) => {
-      if (!mounted) return;
-
-      setSession(currentSession);
-
-      if (event === "SIGNED_IN") {
-        setPage("dashboard");
-        setMessage("");
-        setError("");
-      }
-
-      if (event === "SIGNED_OUT") {
-        setPage("login");
-      }
-
-      if (event === "PASSWORD_RECOVERY") {
-        setPage("reset");
-        setMessage("");
-        setError("");
-      }
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
     });
 
     return () => {
@@ -83,201 +215,250 @@ export default function App() {
     };
   }, []);
 
-  /* -------------------------------------------------------
-     SUPABASE BELUM DIKONFIGURASI
-  ------------------------------------------------------- */
+  return user;
+}
 
-  if (!supabase) {
+/* =========================================================
+   PROTECTED ROUTE
+========================================================= */
+
+function ProtectedRoute({ children }) {
+  const user = useAuth();
+
+  if (user === undefined) {
     return (
-      <div className="app">
-        <div className="grid-bg" />
-
-        <main className="center">
-          <div className="card">
-            <div className="logo">D</div>
-
-            <h1>Supabase belum dikonfigurasi</h1>
-
-            <p>
-              Tambahkan environment variable berikut ke
-              <b> .env.local</b>:
-            </p>
-
-            <div className="env-box">
-              <code>VITE_SUPABASE_URL</code>
-              <code>VITE_SUPABASE_ANON_KEY</code>
-            </div>
-
-            <p className="small">
-              Setelah mengubah .env.local, restart server Vite.
-            </p>
-          </div>
-        </main>
+      <div className="loading-screen">
+        <div className="loading-logo">D</div>
+        <div className="loading-text">MEMUAT DINSTORE...</div>
       </div>
     );
   }
 
-  /* -------------------------------------------------------
-     LOADING
-  ------------------------------------------------------- */
-
-  if (loading) {
-    return (
-      <div className="app">
-        <div className="grid-bg" />
-
-        <main className="center">
-          <div className="loader-card">
-            <div className="spinner" />
-            <p>Memuat...</p>
-          </div>
-        </main>
-      </div>
-    );
+  if (!user) {
+    return <Navigate to="/login" replace />;
   }
 
-  /* -------------------------------------------------------
-     DASHBOARD
-  ------------------------------------------------------- */
+  return children;
+}
 
-  if (session && page === "dashboard") {
-    return (
-      <Dashboard
-        session={session}
-        onLogout={async () => {
-          await supabase.auth.signOut();
-          setSession(null);
-          setPage("login");
-        }}
-      />
-    );
-  }
+/* =========================================================
+   AUTH LAYOUT
+========================================================= */
 
-  /* -------------------------------------------------------
-     RESET PASSWORD
-  ------------------------------------------------------- */
-
-  if (page === "reset") {
-    return (
-      <ResetPassword
-        supabase={supabase}
-        message={message}
-        error={error}
-        setMessage={setMessage}
-        setError={setError}
-        onBack={() => {
-          setPage("login");
-          setMessage("");
-          setError("");
-        }}
-      />
-    );
-  }
-
-  /* -------------------------------------------------------
-     AUTH
-  ------------------------------------------------------- */
-
+function AuthLayout({ children }) {
   return (
-    <AuthPage
-      supabase={supabase}
-      page={page}
-      setPage={setPage}
-      message={message}
-      error={error}
-      setMessage={setMessage}
-      setError={setError}
-    />
+    <div className="auth-page">
+      <div className="auth-background">
+        <div className="glow glow-one" />
+        <div className="glow glow-two" />
+        <div className="grid-background" />
+      </div>
+
+      <Link to="/" className="auth-brand">
+        <span>D</span>
+        <strong>DINSTORE</strong>
+        <b>API</b>
+      </Link>
+
+      <div className="auth-content">{children}</div>
+
+      <div className="auth-footer">
+        © {new Date().getFullYear()} DINSTORE API
+      </div>
+    </div>
   );
 }
 
 /* =========================================================
-   AUTH PAGE
+   GOOGLE LOGIN
 ========================================================= */
 
-function AuthPage({
-  supabase,
-  page,
-  setPage,
-  message,
-  error,
-  setMessage,
-  setError,
-}) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
-
+function GoogleButton() {
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const clearMessages = () => {
-    setMessage("");
+  const loginGoogle = async () => {
     setError("");
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
+    }
   };
 
-  /* -------------------------------------------------------
-     LOGIN
-  ------------------------------------------------------- */
+  return (
+    <>
+      <button
+        type="button"
+        className="google-button"
+        onClick={loginGoogle}
+        disabled={loading}
+      >
+        <span className="google-icon">G</span>
+        <span>
+          {loading ? "MENGHUBUNGKAN..." : "Lanjutkan dengan Google"}
+        </span>
+      </button>
 
-  const login = async (e) => {
+      {error && <div className="auth-error">{error}</div>}
+    </>
+  );
+}
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+function Login() {
+  const navigate = useNavigate();
+
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+
+  const submit = async (e) => {
     e.preventDefault();
 
-    clearMessages();
-
-    if (!email || !password) {
-      setError("Email dan password wajib diisi.");
-      return;
-    }
-
+    setError("");
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
-      email: email.trim(),
+      email,
       password,
     });
 
     setLoading(false);
 
     if (error) {
-      setError(getAuthError(error));
+      setError("Email atau password salah.");
       return;
     }
 
-    setMessage("Login berhasil.");
+    navigate("/");
   };
 
-  /* -------------------------------------------------------
-     REGISTER
-  ------------------------------------------------------- */
+  return (
+    <AuthLayout>
+      <div className="auth-card">
+        <div className="auth-logo">
+          <span>D</span>
+        </div>
 
-  const register = async (e) => {
+        <div className="auth-heading">
+          <div className="eyebrow">MEMBER ACCESS</div>
+          <h1>Selamat datang</h1>
+          <p>Login untuk mengakses DINSTORE API.</p>
+        </div>
+
+        <GoogleButton />
+
+        <div className="divider">
+          <span>ATAU LOGIN DENGAN EMAIL</span>
+        </div>
+
+        <form onSubmit={submit} className="auth-form">
+          <label>
+            <span>Email</span>
+
+            <div className="input-box">
+              <Mail size={18} />
+
+              <input
+                type="email"
+                placeholder="nama@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </label>
+
+          <label>
+            <span>Password</span>
+
+            <div className="input-box">
+              <Lock size={18} />
+
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Masukkan password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </label>
+
+          <div className="form-options">
+            <Link to="/forgot-password">Lupa password?</Link>
+          </div>
+
+          {error && <div className="auth-error">{error}</div>}
+
+          <button className="primary-button" disabled={loading}>
+            {loading ? "MEMPROSES..." : "LOGIN"}
+            {!loading && <ArrowRight size={18} />}
+          </button>
+        </form>
+
+        <div className="auth-bottom">
+          Belum punya akun?
+          <Link to="/register"> Daftar sekarang</Link>
+        </div>
+      </div>
+    </AuthLayout>
+  );
+}
+
+/* =========================================================
+   REGISTER
+========================================================= */
+
+function Register() {
+  const navigate = useNavigate();
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const submit = async (e) => {
     e.preventDefault();
 
-    clearMessages();
-
-    if (!name.trim()) {
-      setError("Nama wajib diisi.");
-      return;
-    }
-
-    if (!email || !password) {
-      setError("Email dan password wajib diisi.");
-      return;
-    }
-
-    if (password.length < 6) {
-      setError("Password minimal 6 karakter.");
-      return;
-    }
-
+    setError("");
+    setSuccess("");
     setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({
-      email: email.trim(),
+      email,
       password,
       options: {
         data: {
-          full_name: name.trim(),
+          name,
         },
       },
     });
@@ -285,347 +466,221 @@ function AuthPage({
     setLoading(false);
 
     if (error) {
-      setError(getAuthError(error));
+      setError(error.message);
       return;
     }
 
-    /*
-      Jika Supabase Email Confirmation dimatikan,
-      session langsung tersedia.
-
-      Jika masih aktif, user akan mendapatkan email
-      konfirmasi dari Supabase.
-    */
-
-    if (data?.session) {
-      setMessage("Akun berhasil dibuat.");
+    if (data.session) {
+      navigate("/");
     } else {
-      setMessage(
-        "Akun berhasil dibuat. Silakan cek email jika konfirmasi email aktif."
+      setSuccess(
+        "Akun berhasil dibuat. Silakan cek email untuk verifikasi akun."
       );
     }
   };
 
-  /* -------------------------------------------------------
-     GOOGLE LOGIN
-  ------------------------------------------------------- */
+  return (
+    <AuthLayout>
+      <div className="auth-card">
+        <div className="auth-logo">
+          <span>D</span>
+        </div>
 
-  const loginGoogle = async () => {
-    clearMessages();
-    setLoading(true);
+        <div className="auth-heading">
+          <div className="eyebrow">CREATE MEMBER</div>
+          <h1>Buat akun</h1>
+          <p>Daftar untuk mendapatkan akses API member.</p>
+        </div>
 
-    const redirectTo = window.location.origin;
+        <GoogleButton />
 
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo,
-      },
-    });
+        <div className="divider">
+          <span>ATAU DAFTAR DENGAN EMAIL</span>
+        </div>
 
-    if (error) {
-      setLoading(false);
-      setError(getAuthError(error));
-    }
-  };
+        <form onSubmit={submit} className="auth-form">
+          <label>
+            <span>Nama</span>
 
-  /* -------------------------------------------------------
-     FORGOT PASSWORD
-  ------------------------------------------------------- */
+            <div className="input-box">
+              <User size={18} />
 
-  const forgotPassword = async (e) => {
+              <input
+                type="text"
+                placeholder="Nama kamu"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                required
+              />
+            </div>
+          </label>
+
+          <label>
+            <span>Email</span>
+
+            <div className="input-box">
+              <Mail size={18} />
+
+              <input
+                type="email"
+                placeholder="nama@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </label>
+
+          <label>
+            <span>Password</span>
+
+            <div className="input-box">
+              <Lock size={18} />
+
+              <input
+                type={showPassword ? "text" : "password"}
+                placeholder="Minimal 8 karakter"
+                minLength={8}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShowPassword(!showPassword)}
+              >
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </label>
+
+          {error && <div className="auth-error">{error}</div>}
+
+          {success && <div className="auth-success">{success}</div>}
+
+          <button className="primary-button" disabled={loading}>
+            {loading ? "MEMBUAT AKUN..." : "DAFTAR"}
+            {!loading && <ArrowRight size={18} />}
+          </button>
+        </form>
+
+        <div className="auth-bottom">
+          Sudah punya akun?
+          <Link to="/login"> Login</Link>
+        </div>
+      </div>
+    </AuthLayout>
+  );
+}
+
+/* =========================================================
+   FORGOT PASSWORD
+========================================================= */
+
+function ForgotPassword() {
+  const [email, setEmail] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const submit = async (e) => {
     e.preventDefault();
 
-    clearMessages();
-
-    if (!email) {
-      setError("Masukkan email terlebih dahulu.");
-      return;
-    }
-
+    setError("");
+    setSuccess("");
     setLoading(true);
 
-    const redirectTo = `${window.location.origin}`;
-
-    const { error } = await supabase.auth.resetPasswordForEmail(
-      email.trim(),
-      {
-        redirectTo,
-      }
-    );
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
 
     setLoading(false);
 
     if (error) {
-      setError(getAuthError(error));
+      setError(error.message);
       return;
     }
 
-    setMessage(
-      "Link reset password sudah dikirim. Cek inbox email kamu."
-    );
+    setSuccess("Link reset password sudah dikirim ke email kamu.");
   };
 
-  /* -------------------------------------------------------
-     LOGIN PAGE
-  ------------------------------------------------------- */
-
-  if (page === "login") {
-    return (
-      <AuthLayout>
-        <div className="auth-header">
-          <div className="logo">D</div>
-
-          <h1>Selamat datang</h1>
-
-          <p>Login ke DINSTORE</p>
+  return (
+    <AuthLayout>
+      <div className="auth-card">
+        <div className="auth-logo">
+          <span>?</span>
         </div>
 
-        {message && <div className="success">{message}</div>}
-
-        {error && <div className="error">{error}</div>}
-
-        <form onSubmit={login} className="form">
-          <label>Email</label>
-
-          <input
-            type="email"
-            placeholder="nama@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-
-          <label>Password</label>
-
-          <input
-            type="password"
-            placeholder="Masukkan password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="current-password"
-          />
-
-          <button
-            type="submit"
-            className="primary-btn"
-            disabled={loading}
-          >
-            {loading ? "Memproses..." : "Login"}
-          </button>
-        </form>
-
-        <button
-          className="forgot-btn"
-          onClick={() => {
-            clearMessages();
-            setPage("forgot");
-          }}
-        >
-          Lupa password?
-        </button>
-
-        <div className="divider">
-          <span>atau</span>
-        </div>
-
-        <button
-          className="google-btn"
-          onClick={loginGoogle}
-          disabled={loading}
-        >
-          <GoogleIcon />
-
-          <span>Login dengan Google</span>
-        </button>
-
-        <div className="bottom-text">
-          Belum punya akun?{" "}
-          <button
-            onClick={() => {
-              clearMessages();
-              setPage("register");
-            }}
-          >
-            Daftar
-          </button>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  /* -------------------------------------------------------
-     REGISTER PAGE
-  ------------------------------------------------------- */
-
-  if (page === "register") {
-    return (
-      <AuthLayout>
-        <div className="auth-header">
-          <div className="logo">D</div>
-
-          <h1>Buat akun</h1>
-
-          <p>Daftar akun DINSTORE baru</p>
-        </div>
-
-        {message && <div className="success">{message}</div>}
-
-        {error && <div className="error">{error}</div>}
-
-        <form onSubmit={register} className="form">
-          <label>Nama</label>
-
-          <input
-            type="text"
-            placeholder="Nama kamu"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="name"
-          />
-
-          <label>Email</label>
-
-          <input
-            type="email"
-            placeholder="nama@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
-
-          <label>Password</label>
-
-          <input
-            type="password"
-            placeholder="Minimal 6 karakter"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            autoComplete="new-password"
-          />
-
-          <button
-            type="submit"
-            className="primary-btn"
-            disabled={loading}
-          >
-            {loading ? "Membuat akun..." : "Daftar"}
-          </button>
-        </form>
-
-        <div className="divider">
-          <span>atau</span>
-        </div>
-
-        <button
-          className="google-btn"
-          onClick={loginGoogle}
-          disabled={loading}
-        >
-          <GoogleIcon />
-
-          <span>Daftar dengan Google</span>
-        </button>
-
-        <div className="bottom-text">
-          Sudah punya akun?{" "}
-          <button
-            onClick={() => {
-              clearMessages();
-              setPage("login");
-            }}
-          >
-            Login
-          </button>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  /* -------------------------------------------------------
-     FORGOT PAGE
-  ------------------------------------------------------- */
-
-  if (page === "forgot") {
-    return (
-      <AuthLayout>
-        <div className="auth-header">
-          <div className="logo">D</div>
-
+        <div className="auth-heading">
+          <div className="eyebrow">PASSWORD RECOVERY</div>
           <h1>Lupa password?</h1>
-
-          <p>Masukkan email untuk mendapatkan link reset.</p>
+          <p>
+            Masukkan email akun kamu dan kami akan mengirimkan link reset.
+          </p>
         </div>
 
-        {message && <div className="success">{message}</div>}
+        <form onSubmit={submit} className="auth-form">
+          <label>
+            <span>Email</span>
 
-        {error && <div className="error">{error}</div>}
+            <div className="input-box">
+              <Mail size={18} />
 
-        <form onSubmit={forgotPassword} className="form">
-          <label>Email</label>
+              <input
+                type="email"
+                placeholder="nama@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+              />
+            </div>
+          </label>
 
-          <input
-            type="email"
-            placeholder="nama@email.com"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            autoComplete="email"
-          />
+          {error && <div className="auth-error">{error}</div>}
 
-          <button
-            type="submit"
-            className="primary-btn"
-            disabled={loading}
-          >
-            {loading ? "Mengirim..." : "Kirim Link Reset"}
+          {success && <div className="auth-success">{success}</div>}
+
+          <button className="primary-button" disabled={loading}>
+            {loading ? "MENGIRIM..." : "KIRIM LINK RESET"}
+            {!loading && <ArrowRight size={18} />}
           </button>
         </form>
 
-        <button
-          className="back-btn"
-          onClick={() => {
-            clearMessages();
-            setPage("login");
-          }}
-        >
-          ← Kembali ke Login
-        </button>
-      </AuthLayout>
-    );
-  }
-
-  return null;
+        <div className="auth-bottom">
+          <Link to="/login">← Kembali ke login</Link>
+        </div>
+      </div>
+    </AuthLayout>
+  );
 }
 
 /* =========================================================
    RESET PASSWORD
 ========================================================= */
 
-function ResetPassword({
-  supabase,
-  message,
-  error,
-  setMessage,
-  setError,
-  onBack,
-}) {
+function ResetPassword() {
+  const navigate = useNavigate();
+
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+
+  const [show, setShow] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const updatePassword = async (e) => {
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const submit = async (e) => {
     e.preventDefault();
 
-    setMessage("");
     setError("");
-
-    if (password.length < 6) {
-      setError("Password minimal 6 karakter.");
-      return;
-    }
+    setSuccess("");
 
     if (password !== confirm) {
-      setError("Konfirmasi password tidak sama.");
+      setError("Password tidak sama.");
       return;
     }
 
@@ -638,83 +693,521 @@ function ResetPassword({
     setLoading(false);
 
     if (error) {
-      setError(getAuthError(error));
+      setError(error.message);
       return;
     }
 
-    setMessage("Password berhasil diubah.");
+    setSuccess("Password berhasil diubah.");
 
     setTimeout(() => {
-      onBack();
+      navigate("/");
     }, 1500);
   };
 
   return (
     <AuthLayout>
-      <div className="auth-header">
-        <div className="logo">D</div>
+      <div className="auth-card">
+        <div className="auth-logo">
+          <span>✓</span>
+        </div>
 
-        <h1>Password baru</h1>
+        <div className="auth-heading">
+          <div className="eyebrow">ACCOUNT SECURITY</div>
+          <h1>Password baru</h1>
+          <p>Buat password baru untuk akun DINSTORE kamu.</p>
+        </div>
 
-        <p>Buat password baru untuk akun kamu.</p>
+        <form onSubmit={submit} className="auth-form">
+          <label>
+            <span>Password baru</span>
+
+            <div className="input-box">
+              <Lock size={18} />
+
+              <input
+                type={show ? "text" : "password"}
+                minLength={8}
+                placeholder="Minimal 8 karakter"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+
+              <button
+                type="button"
+                className="password-toggle"
+                onClick={() => setShow(!show)}
+              >
+                {show ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+            </div>
+          </label>
+
+          <label>
+            <span>Konfirmasi password</span>
+
+            <div className="input-box">
+              <Lock size={18} />
+
+              <input
+                type={show ? "text" : "password"}
+                minLength={8}
+                placeholder="Ulangi password"
+                value={confirm}
+                onChange={(e) => setConfirm(e.target.value)}
+                required
+              />
+            </div>
+          </label>
+
+          {error && <div className="auth-error">{error}</div>}
+
+          {success && <div className="auth-success">{success}</div>}
+
+          <button className="primary-button" disabled={loading}>
+            {loading ? "MENYIMPAN..." : "SIMPAN PASSWORD"}
+            {!loading && <Check size={18} />}
+          </button>
+        </form>
       </div>
-
-      {message && <div className="success">{message}</div>}
-
-      {error && <div className="error">{error}</div>}
-
-      <form onSubmit={updatePassword} className="form">
-        <label>Password baru</label>
-
-        <input
-          type="password"
-          placeholder="Minimal 6 karakter"
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          autoComplete="new-password"
-        />
-
-        <label>Konfirmasi password</label>
-
-        <input
-          type="password"
-          placeholder="Ulangi password"
-          value={confirm}
-          onChange={(e) => setConfirm(e.target.value)}
-          autoComplete="new-password"
-        />
-
-        <button
-          type="submit"
-          className="primary-btn"
-          disabled={loading}
-        >
-          {loading ? "Menyimpan..." : "Simpan Password"}
-        </button>
-      </form>
     </AuthLayout>
   );
 }
 
 /* =========================================================
-   AUTH LAYOUT
+   HEADER
 ========================================================= */
 
-function AuthLayout({ children }) {
+function Header({ user, onMenu }) {
+  const navigate = useNavigate();
+
+  const logout = async () => {
+    await supabase.auth.signOut();
+    navigate("/login");
+  };
+
+  return (
+    <header className="header">
+      <button className="mobile-menu" onClick={onMenu}>
+        <Menu size={22} />
+      </button>
+
+      <Link to="/" className="brand">
+        <span>D</span>
+        <strong>DINSTORE</strong>
+        <b>API</b>
+      </Link>
+
+      <div className="header-right">
+        <Link to="/dashboard" className="member-button">
+          <User size={16} />
+          MEMBER
+        </Link>
+
+        <button className="logout-button" onClick={logout}>
+          <LogOut size={16} />
+        </button>
+      </div>
+    </header>
+  );
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+function Sidebar({ open, close }) {
+  return (
+    <>
+      {open && <div className="sidebar-overlay" onClick={close} />}
+
+      <aside className={`sidebar ${open ? "sidebar-open" : ""}`}>
+        <div className="sidebar-top">
+          <div>
+            <small>NAVIGATION</small>
+            <strong>DINSTORE API</strong>
+          </div>
+
+          <button onClick={close} className="sidebar-close">
+            <X size={20} />
+          </button>
+        </div>
+
+        <nav className="sidebar-nav">
+          <Link to="/" onClick={close}>
+            <HomeIcon size={18} />
+            HOME
+          </Link>
+
+          <div className="sidebar-label">MODULES</div>
+
+          {categories.map((category) => {
+            const Icon = category.icon;
+
+            return (
+              <Link
+                key={category.id}
+                to={`/docs/${category.id}`}
+                onClick={close}
+              >
+                <Icon size={18} />
+                {category.name}
+                <span>›</span>
+              </Link>
+            );
+          })}
+
+          <div className="sidebar-label">MEMBER</div>
+
+          <Link to="/dashboard" onClick={close}>
+            <LayoutDashboard size={18} />
+            DASHBOARD
+          </Link>
+        </nav>
+
+        <div className="sidebar-bottom">
+          <div className="online-dot" />
+
+          <div>
+            <strong>API ONLINE</strong>
+            <small>All systems operational</small>
+          </div>
+        </div>
+      </aside>
+    </>
+  );
+}
+
+/* =========================================================
+   APP SHELL
+========================================================= */
+
+function AppShell({ children }) {
+  const user = useAuth();
+  const [sidebar, setSidebar] = useState(false);
+
+  if (user === undefined) {
+    return (
+      <div className="loading-screen">
+        <div className="loading-logo">D</div>
+        <div className="loading-text">MEMUAT DINSTORE...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
   return (
     <div className="app">
-      <div className="grid-bg" />
+      <Header user={user} onMenu={() => setSidebar(true)} />
 
-      <div className="glow glow-one" />
-      <div className="glow glow-two" />
+      <div className="app-layout">
+        <Sidebar open={sidebar} close={() => setSidebar(false)} />
 
-      <main className="auth-container">
-        <div className="auth-card">{children}</div>
+        <main className="main-content">{children}</main>
+      </div>
+    </div>
+  );
+}
 
-        <p className="copyright">
-          © {new Date().getFullYear()} DINSTORE
+/* =========================================================
+   HOME
+========================================================= */
+
+function Home() {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("all");
+
+  const filtered = endpoints.filter((endpoint) => {
+    const matchCategory =
+      filter === "all" || endpoint.category === filter;
+
+    const text =
+      `${endpoint.name} ${endpoint.path} ${endpoint.description}`.toLowerCase();
+
+    return matchCategory && text.includes(search.toLowerCase());
+  });
+
+  return (
+    <div className="page">
+      <section className="hero">
+        <div className="status-badge">
+          <span />
+          TERMINAL ACTIVE
+        </div>
+
+        <h1>
+          DINSTORE <span>API</span>
+        </h1>
+
+        <p>
+          API modern untuk aplikasi, automation, downloader,
+          tools, AI dan berbagai kebutuhan developer.
         </p>
-      </main>
+
+        <div className="hero-actions">
+          <a href="#endpoints" className="hero-primary">
+            Explore API
+            <ArrowRight size={18} />
+          </a>
+
+          <Link to="/dashboard" className="hero-secondary">
+            Dashboard
+          </Link>
+        </div>
+      </section>
+
+      <section className="stats">
+        <div className="stat-card">
+          <Globe size={21} />
+          <small>CATEGORIES</small>
+          <strong>{categories.length}</strong>
+        </div>
+
+        <div className="stat-card">
+          <Zap size={21} />
+          <small>ENDPOINTS</small>
+          <strong>{endpoints.length}+</strong>
+        </div>
+
+        <div className="stat-card">
+          <ShieldCheck size={21} />
+          <small>STATUS</small>
+          <strong className="green">ONLINE</strong>
+        </div>
+      </section>
+
+      <section className="api-banner">
+        <div className="api-banner-icon">
+          <KeyRound size={22} />
+        </div>
+
+        <div>
+          <strong>API KEY MEMBER</strong>
+          <p>
+            Gunakan API key member untuk endpoint yang membutuhkan
+            autentikasi.
+          </p>
+        </div>
+
+        <Link to="/dashboard">
+          LIHAT KEY
+          <ArrowRight size={16} />
+        </Link>
+      </section>
+
+      <section className="endpoint-section" id="endpoints">
+        <div className="section-heading">
+          <div>
+            <div className="eyebrow">API DOCUMENTATION</div>
+            <h2>Endpoints</h2>
+            <p>Explore semua endpoint DINSTORE API.</p>
+          </div>
+        </div>
+
+        <div className="search-box">
+          <Search size={19} />
+
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Search endpoint..."
+          />
+        </div>
+
+        <div className="filters">
+          <button
+            className={filter === "all" ? "active" : ""}
+            onClick={() => setFilter("all")}
+          >
+            ALL
+          </button>
+
+          {categories.map((category) => (
+            <button
+              key={category.id}
+              className={filter === category.id ? "active" : ""}
+              onClick={() => setFilter(category.id)}
+            >
+              {category.name}
+            </button>
+          ))}
+        </div>
+
+        <div className="endpoint-grid">
+          {filtered.map((endpoint) => (
+            <EndpointCard
+              key={endpoint.path}
+              endpoint={endpoint}
+            />
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+/* =========================================================
+   ENDPOINT CARD
+========================================================= */
+
+function EndpointCard({ endpoint }) {
+  return (
+    <Link
+      className="endpoint-card"
+      to={`/endpoint?path=${encodeURIComponent(endpoint.path)}`}
+    >
+      <div className="endpoint-top">
+        <span className="method">GET</span>
+
+        <span className="endpoint-category">
+          {endpoint.category.toUpperCase()}
+        </span>
+      </div>
+
+      <h3>{endpoint.name}</h3>
+
+      <code>{endpoint.path}</code>
+
+      <p>{endpoint.description}</p>
+
+      <div className="endpoint-open">
+        OPEN ENDPOINT
+        <ArrowRight size={15} />
+      </div>
+    </Link>
+  );
+}
+
+/* =========================================================
+   DOCS
+========================================================= */
+
+function Docs({ id }) {
+  const category = categories.find((item) => item.id === id);
+
+  if (!category) {
+    return <Navigate to="/" replace />;
+  }
+
+  const Icon = category.icon;
+
+  const list = endpoints.filter(
+    (endpoint) => endpoint.category === id
+  );
+
+  return (
+    <div className="page">
+      <div className="docs-header">
+        <div className="docs-icon">
+          <Icon size={28} />
+        </div>
+
+        <div>
+          <div className="eyebrow">MODULE</div>
+          <h1>{category.name}</h1>
+          <p>{category.description}</p>
+        </div>
+      </div>
+
+      <div className="endpoint-grid">
+        {list.map((endpoint) => (
+          <EndpointCard
+            key={endpoint.path}
+            endpoint={endpoint}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+/* =========================================================
+   ENDPOINT DETAIL
+========================================================= */
+
+function Endpoint() {
+  const location = useLocation();
+
+  const params = new URLSearchParams(location.search);
+
+  const path = params.get("path") || "/api/health";
+
+  const endpoint = endpoints.find(
+    (item) => item.path === path
+  );
+
+  const [copied, setCopied] = useState(false);
+
+  const url = window.location.origin + path;
+
+  const copy = async () => {
+    await navigator.clipboard.writeText(url);
+
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 1500);
+  };
+
+  return (
+    <div className="page">
+      <Link to="/" className="back-link">
+        ← Kembali ke dokumentasi
+      </Link>
+
+      <div className="endpoint-detail">
+        <div className="detail-method">GET</div>
+
+        <div className="eyebrow">API ENDPOINT</div>
+
+        <h1>{endpoint?.name || "API Endpoint"}</h1>
+
+        <code className="detail-path">{path}</code>
+
+        <p>
+          {endpoint?.description ||
+            "DINSTORE API endpoint."}
+        </p>
+
+        <div className="request-box">
+          <div className="request-head">
+            <span>REQUEST URL</span>
+
+            <button onClick={copy}>
+              {copied ? (
+                <>
+                  <Check size={15} />
+                  COPIED
+                </>
+              ) : (
+                <>
+                  <Copy size={15} />
+                  COPY
+                </>
+              )}
+            </button>
+          </div>
+
+          <code>{url}</code>
+        </div>
+
+        <div className="info-box">
+          <KeyRound size={19} />
+
+          <div>
+            <strong>Authentication</strong>
+
+            <p>
+              Endpoint tertentu membutuhkan API key
+              member dari dashboard.
+            </p>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -723,148 +1216,209 @@ function AuthLayout({ children }) {
    DASHBOARD
 ========================================================= */
 
-function Dashboard({ session, onLogout }) {
-  const user = session?.user;
+function Dashboard() {
+  const user = useAuth();
 
-  const name =
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
-    "User";
+  const [profile, setProfile] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const loadProfile = async () => {
+      const { data } = await supabase
+        .from("profiles")
+        .select(
+          "id,name,email,api_key,status,role,created_at"
+        )
+        .eq("id", user.id)
+        .maybeSingle();
+
+      setProfile(data);
+      setLoading(false);
+    };
+
+    loadProfile();
+  }, [user]);
+
+  const apiKey = profile?.api_key || "";
+
+  const copyKey = async () => {
+    if (!apiKey) return;
+
+    await navigator.clipboard.writeText(apiKey);
+
+    setCopied(true);
+
+    setTimeout(() => {
+      setCopied(false);
+    }, 1500);
+  };
 
   return (
-    <div className="app">
-      <div className="grid-bg" />
+    <div className="page">
+      <div className="dashboard-header">
+        <div>
+          <div className="eyebrow">MEMBER PANEL</div>
+          <h1>Dashboard</h1>
+          <p>Kelola akun dan API key kamu.</p>
+        </div>
 
-      <div className="glow glow-one" />
-      <div className="glow glow-two" />
+        <div className="profile-avatar">
+          {(profile?.name ||
+            user?.email ||
+            "D")[0].toUpperCase()}
+        </div>
+      </div>
 
-      <main className="dashboard">
-        <header className="topbar">
-          <div className="brand">
-            <div className="brand-logo">D</div>
+      {loading ? (
+        <div className="dashboard-loading">
+          MEMUAT PROFILE...
+        </div>
+      ) : (
+        <>
+          <div className="dashboard-grid">
+            <div className="dashboard-card">
+              <small>NAMA</small>
+              <strong>{profile?.name || "-"}</strong>
+            </div>
 
-            <div>
-              <strong>DINSTORE</strong>
-              <small>API Dashboard</small>
+            <div className="dashboard-card">
+              <small>EMAIL</small>
+              <strong>
+                {profile?.email || user?.email || "-"}
+              </strong>
+            </div>
+
+            <div className="dashboard-card">
+              <small>STATUS</small>
+              <strong className="green">
+                {profile?.status || "active"}
+              </strong>
+            </div>
+
+            <div className="dashboard-card">
+              <small>ROLE</small>
+              <strong>
+                {profile?.role || "member"}
+              </strong>
             </div>
           </div>
 
-          <button className="logout-btn" onClick={onLogout}>
-            Logout
-          </button>
-        </header>
+          <div className="api-key-card">
+            <div className="api-key-head">
+              <div>
+                <div className="eyebrow">YOUR API KEY</div>
+                <h2>Member API Key</h2>
+              </div>
 
-        <section className="welcome-card">
-          <div className="avatar">
-            {name.charAt(0).toUpperCase()}
+              <KeyRound size={24} />
+            </div>
+
+            <div className="api-key-value">
+              {apiKey || "API KEY BELUM TERSEDIA"}
+            </div>
+
+            <button
+              className="copy-key"
+              onClick={copyKey}
+              disabled={!apiKey}
+            >
+              {copied ? (
+                <>
+                  <Check size={17} />
+                  COPIED
+                </>
+              ) : (
+                <>
+                  <Copy size={17} />
+                  COPY API KEY
+                </>
+              )}
+            </button>
           </div>
 
-          <div>
-            <span className="eyebrow">WELCOME</span>
+          <div className="security-card">
+            <ShieldCheck size={22} />
 
-            <h1>Halo, {name} 👋</h1>
-
-            <p>
-              Kamu berhasil login ke DINSTORE.
-            </p>
+            <div>
+              <strong>Account secured</strong>
+              <p>
+                Data akun dikelola melalui Supabase
+                Authentication.
+              </p>
+            </div>
           </div>
-        </section>
-
-        <section className="info-grid">
-          <div className="info-card">
-            <span>Status</span>
-            <strong className="online">
-              ● Online
-            </strong>
-          </div>
-
-          <div className="info-card">
-            <span>Email</span>
-            <strong>{user?.email || "-"}</strong>
-          </div>
-
-          <div className="info-card">
-            <span>Provider</span>
-            <strong>
-              {user?.app_metadata?.provider || "email"}
-            </strong>
-          </div>
-        </section>
-      </main>
+        </>
+      )}
     </div>
   );
 }
 
 /* =========================================================
-   GOOGLE ICON
+   APP
 ========================================================= */
 
-function GoogleIcon() {
+function MainApp() {
   return (
-    <svg
-      width="20"
-      height="20"
-      viewBox="0 0 24 24"
-      aria-hidden="true"
-    >
-      <path
-        fill="#4285F4"
-        d="M21.35 12.23c0-.79-.07-1.55-.22-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"
+    <Routes>
+      {/* AUTH */}
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+      <Route
+        path="/forgot-password"
+        element={<ForgotPassword />}
+      />
+      <Route
+        path="/reset-password"
+        element={<ResetPassword />}
       />
 
-      <path
-        fill="#34A853"
-        d="M12 21.7c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.28v2.53A9.74 9.74 0 0 0 12 21.7z"
-      />
+      {/* PROTECTED APP */}
+      <Route
+        path="/*"
+        element={
+          <ProtectedRoute>
+            <AppShell>
+              <Routes>
+                <Route path="/" element={<Home />} />
 
-      <path
-        fill="#FBBC05"
-        d="M6.53 13.79a5.86 5.86 0 0 1 0-3.58V7.68H3.28a9.73 9.73 0 0 0 0 8.64l3.25-2.53z"
-      />
+                {categories.map((category) => (
+                  <Route
+                    key={category.id}
+                    path={`/docs/${category.id}`}
+                    element={<Docs id={category.id} />}
+                  />
+                ))}
 
-      <path
-        fill="#EA4335"
-        d="M12 6.18c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.83 3.3 14.63 2.3 12 2.3a9.74 9.74 0 0 0-8.72 5.38l3.25 2.53C7.3 7.9 9.46 6.18 12 6.18z"
+                <Route
+                  path="/endpoint"
+                  element={<Endpoint />}
+                />
+
+                <Route
+                  path="/dashboard"
+                  element={<Dashboard />}
+                />
+
+                <Route
+                  path="*"
+                  element={<Navigate to="/" replace />}
+                />
+              </Routes>
+            </AppShell>
+          </ProtectedRoute>
+        }
       />
-    </svg>
+    </Routes>
   );
 }
 
-/* =========================================================
-   AUTH ERROR
-========================================================= */
-
-function getAuthError(error) {
-  if (!error?.message) {
-    return "Terjadi kesalahan. Silakan coba lagi.";
-  }
-
-  const message = error.message.toLowerCase();
-
-  if (message.includes("invalid login credentials")) {
-    return "Email atau password salah.";
-  }
-
-  if (message.includes("email not confirmed")) {
-    return "Email belum dikonfirmasi.";
-  }
-
-  if (message.includes("user already registered")) {
-    return "Email tersebut sudah terdaftar.";
-  }
-
-  if (message.includes("password should be at least")) {
-    return "Password terlalu pendek.";
-  }
-
-  if (message.includes("provider is not enabled")) {
-    return "Login Google belum diaktifkan di Supabase.";
-  }
-
-  if (message.includes("redirect")) {
-    return "Redirect URL belum diizinkan di Supabase.";
-  }
-
-  return error.message;
+export default function App() {
+  return (
+    <BrowserRouter>
+      <MainApp />
+    </BrowserRouter>
+  );
 }
