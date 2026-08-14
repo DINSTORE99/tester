@@ -1,1009 +1,597 @@
 import React, { useEffect, useMemo, useState } from "react";
 import "./style.css";
-import { supabase } from "./lib/supabase";
+import { createClient } from "@supabase/supabase-js";
+
+/* =========================================================
+   SUPABASE
+========================================================= */
+
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+
+const supabase =
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
+
+/* =========================================================
+   API CONFIG
+========================================================= */
 
 const API_BASE =
-  import.meta.env.VITE_API_BASE_URL || window.location.origin;
+  import.meta.env.VITE_API_BASE_URL ||
+  window.location.origin;
 
-const ENDPOINTS = [
+/* =========================================================
+   API CATEGORIES
+========================================================= */
+
+const API_CATEGORIES = [
   {
-    name: "TikTok Downloader",
-    method: "GET",
-    path: "/api/download/tiktok",
-    category: "DOWNLOAD",
-    icon: "♪",
-  },
-  {
-    name: "Instagram Downloader",
-    method: "GET",
-    path: "/api/download/instagram",
-    category: "DOWNLOAD",
-    icon: "◎",
-  },
-  {
-    name: "CapCut Downloader",
-    method: "GET",
-    path: "/api/download/capcut",
-    category: "DOWNLOAD",
-    icon: "◈",
-  },
-  {
-    name: "AI ChatGPT",
-    method: "POST",
-    path: "/api/ai/chatgpt",
-    category: "AI",
+    name: "AI",
     icon: "✦",
+    color: "green",
+    endpoints: [
+      {
+        name: "AI Aiko",
+        method: "GET",
+        path: "/api/ai/aiko",
+        description: "AI chat assistant.",
+        params: [
+          {
+            name: "q",
+            label: "Prompt",
+            placeholder: "Halo",
+            required: true,
+          },
+          {
+            name: "reset",
+            label: "Reset",
+            placeholder: "false",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "ChatGPT",
+        method: "GET",
+        path: "/api/ai/chatgpt",
+        description: "AI chat menggunakan endpoint ChatGPT.",
+        params: [
+          {
+            name: "q",
+            label: "Question",
+            placeholder: "Jelaskan tentang JavaScript",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "AI Lyrics Generator",
+        method: "GET",
+        path: "/api/ai/lyricsgen",
+        description: "Generate lyrics menggunakan AI.",
+        params: [
+          {
+            name: "theme",
+            label: "Theme",
+            placeholder: "persahabatan",
+            required: true,
+          },
+          {
+            name: "genre",
+            label: "Genre",
+            placeholder: "pop",
+            required: false,
+          },
+          {
+            name: "emotion",
+            label: "Emotion",
+            placeholder: "happy",
+            required: false,
+          },
+          {
+            name: "lang",
+            label: "Language",
+            placeholder: "Indonesia",
+            required: false,
+          },
+        ],
+      },
+      {
+        name: "AI Coder",
+        method: "GET",
+        path: "/api/tools/aicoder",
+        description: "Generate kode menggunakan AI.",
+        params: [
+          {
+            name: "prompt",
+            label: "Prompt",
+            placeholder: "buat landing page modern",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "AI4Chat",
+        method: "GET",
+        path: "/api/ai/ai4chat",
+        description: "AI chat generation.",
+        params: [
+          {
+            name: "q",
+            label: "Question",
+            placeholder: "Halo",
+            required: true,
+          },
+        ],
+      },
+    ],
   },
+
   {
-    name: "AI Aiko",
-    method: "GET",
-    path: "/api/ai/aiko",
-    category: "AI",
-    icon: "✦",
+    name: "ADMIN",
+    icon: "◇",
+    color: "red",
+    endpoints: [
+      {
+        name: "Admin Status",
+        method: "GET",
+        path: "/api/admin/status",
+        description: "Check admin status.",
+        params: [],
+      },
+      {
+        name: "Admin Info",
+        method: "GET",
+        path: "/api/admin/info",
+        description: "Get admin information.",
+        params: [],
+      },
+      {
+        name: "Server Status",
+        method: "GET",
+        path: "/api/admin/server",
+        description: "Check server information.",
+        params: [],
+      },
+    ],
   },
+
   {
-    name: "AI4Chat",
-    method: "GET",
-    path: "/api/ai/ai4chat",
-    category: "AI",
-    icon: "✦",
+    name: "CACHE",
+    icon: "▣",
+    color: "cyan",
+    endpoints: [
+      {
+        name: "Cache Get",
+        method: "GET",
+        path: "/api/cache/get",
+        description: "Get cached data.",
+        params: [
+          {
+            name: "key",
+            label: "Key",
+            placeholder: "example",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Cache Clear",
+        method: "GET",
+        path: "/api/cache/clear",
+        description: "Clear cache.",
+        params: [],
+      },
+    ],
   },
+
   {
-    name: "Lyrics Generator",
-    method: "GET",
-    path: "/api/ai/lyricsgen",
-    category: "AI",
-    icon: "♫",
+    name: "DOWNLOAD",
+    icon: "⇩",
+    color: "blue",
+    endpoints: [
+      {
+        name: "TikTok Downloader",
+        method: "GET",
+        path: "/api/download/tiktok",
+        description: "Download video TikTok.",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://vt.tiktok.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Instagram Downloader",
+        method: "GET",
+        path: "/api/download/instagram",
+        description: "Download media Instagram.",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://instagram.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "CapCut Downloader",
+        method: "GET",
+        path: "/api/download/capcut",
+        description: "Download CapCut.",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://www.capcut.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Facebook Downloader",
+        method: "GET",
+        path: "/api/download/facebook",
+        description: "Download Facebook media.",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://facebook.com/...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "MediaFire Downloader",
+        method: "GET",
+        path: "/api/download/mediafire",
+        description: "Download MediaFire.",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://mediafire.com/...",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "FUN",
+    icon: "♣",
+    color: "pink",
+    endpoints: [
+      {
+        name: "Random Joke",
+        method: "GET",
+        path: "/api/fun/joke",
+        description: "Generate random joke.",
+        params: [],
+      },
+      {
+        name: "Truth",
+        method: "GET",
+        path: "/api/fun/truth",
+        description: "Random truth question.",
+        params: [],
+      },
+      {
+        name: "Dare",
+        method: "GET",
+        path: "/api/fun/dare",
+        description: "Random dare.",
+        params: [],
+      },
+      {
+        name: "Quotes",
+        method: "GET",
+        path: "/api/fun/quotes",
+        description: "Random quotes.",
+        params: [],
+      },
+    ],
+  },
+
+  {
+    name: "LEADERBOARD",
+    icon: "♛",
+    color: "gold",
+    endpoints: [
+      {
+        name: "Leaderboard",
+        method: "GET",
+        path: "/api/leaderboard",
+        description: "Get leaderboard data.",
+        params: [],
+      },
+    ],
+  },
+
+  {
+    name: "LIBRARY",
+    icon: "▤",
+    color: "orange",
+    endpoints: [
+      {
+        name: "Library List",
+        method: "GET",
+        path: "/api/library",
+        description: "Get library information.",
+        params: [],
+      },
+      {
+        name: "Library Search",
+        method: "GET",
+        path: "/api/library/search",
+        description: "Search library.",
+        params: [
+          {
+            name: "q",
+            label: "Search",
+            placeholder: "keyword",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "MAKER",
+    icon: "✣",
+    color: "pink",
+    endpoints: [
+      {
+        name: "Text Maker",
+        method: "GET",
+        path: "/api/maker/text",
+        description: "Create styled text.",
+        params: [
+          {
+            name: "text",
+            label: "Text",
+            placeholder: "Hello",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Sticker Maker",
+        method: "GET",
+        path: "/api/maker/sticker",
+        description: "Create sticker.",
+        params: [
+          {
+            name: "url",
+            label: "Image URL",
+            placeholder: "https://...",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Logo Maker",
+        method: "GET",
+        path: "/api/maker/logo",
+        description: "Generate logo.",
+        params: [
+          {
+            name: "text",
+            label: "Text",
+            placeholder: "DIN",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "NEWS",
+    icon: "▥",
+    color: "cyan",
+    endpoints: [
+      {
+        name: "Latest News",
+        method: "GET",
+        path: "/api/news/latest",
+        description: "Get latest news.",
+        params: [],
+      },
+      {
+        name: "Search News",
+        method: "GET",
+        path: "/api/news/search",
+        description: "Search news.",
+        params: [
+          {
+            name: "q",
+            label: "Keyword",
+            placeholder: "teknologi",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "RANDOM",
+    icon: "◆",
+    color: "purple",
+    endpoints: [
+      {
+        name: "Random Image",
+        method: "GET",
+        path: "/api/random/image",
+        description: "Get random image.",
+        params: [],
+      },
+      {
+        name: "Random Number",
+        method: "GET",
+        path: "/api/random/number",
+        description: "Generate random number.",
+        params: [
+          {
+            name: "min",
+            label: "Minimum",
+            placeholder: "1",
+            required: false,
+          },
+          {
+            name: "max",
+            label: "Maximum",
+            placeholder: "100",
+            required: false,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "SEARCH",
+    icon: "⌕",
+    color: "green",
+    endpoints: [
+      {
+        name: "Web Search",
+        method: "GET",
+        path: "/api/search/web",
+        description: "Search information from web.",
+        params: [
+          {
+            name: "q",
+            label: "Query",
+            placeholder: "OpenAI",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Image Search",
+        method: "GET",
+        path: "/api/search/image",
+        description: "Search images.",
+        params: [
+          {
+            name: "q",
+            label: "Query",
+            placeholder: "robot",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "STALK",
+    icon: "◉",
+    color: "purple",
+    endpoints: [
+      {
+        name: "TikTok Stalk",
+        method: "GET",
+        path: "/api/stalk/tiktok",
+        description: "Get public TikTok profile information.",
+        params: [
+          {
+            name: "username",
+            label: "Username",
+            placeholder: "username",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Instagram Stalk",
+        method: "GET",
+        path: "/api/stalk/instagram",
+        description: "Get public Instagram profile information.",
+        params: [
+          {
+            name: "username",
+            label: "Username",
+            placeholder: "username",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "TOOLS",
+    icon: "⌘",
+    color: "orange",
+    endpoints: [
+      {
+        name: "Domain Info",
+        method: "GET",
+        path: "/api/tools/domaininfo",
+        description: "Check domain information.",
+        params: [
+          {
+            name: "domain",
+            label: "Domain",
+            placeholder: "example.com",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "QR Generator",
+        method: "GET",
+        path: "/api/tools/qr",
+        description: "Generate QR code.",
+        params: [
+          {
+            name: "text",
+            label: "Text",
+            placeholder: "Hello World",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Short URL",
+        method: "GET",
+        path: "/api/tools/shorturl",
+        description: "Shorten URL.",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://example.com",
+            required: true,
+          },
+        ],
+      },
+    ],
   },
 ];
 
 /* =========================================================
-   HELPERS
+   ROBOT
 ========================================================= */
 
-function copyText(text) {
-  navigator.clipboard?.writeText(text);
-}
-
-function formatDate(date) {
-  if (!date) return "-";
-
-  return new Date(date).toLocaleDateString("id-ID", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function daysLeft(date) {
-  if (!date) return 0;
-
-  const now = new Date();
-  const end = new Date(date);
-
-  return Math.max(
-    0,
-    Math.ceil(
-      (end.getTime() - now.getTime()) /
-        (1000 * 60 * 60 * 24)
-    )
-  );
-}
-
-/* =========================================================
-   LOGO
-========================================================= */
-
-function Logo() {
+function RobotIcon() {
   return (
-    <div className="brand">
-      <div className="brand-mark">
-        <span />
-        <span />
-      </div>
-
-      <div>
-        <strong>DIN API🔥</strong>
-        <small>API SYSTEM</small>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   STAT CARD
-========================================================= */
-
-function StatCard({
-  title,
-  value,
-  suffix,
-  icon,
-  color = "purple",
-}) {
-  return (
-    <div className="stat-card">
-      <div>
-        <small>{title}</small>
-
-        <strong>
-          {value}
-          {suffix && (
-            <em>{suffix}</em>
-          )}
-        </strong>
-      </div>
-
-      <div className={`stat-icon ${color}`}>
-        {icon}
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   MEMBER DASHBOARD
-========================================================= */
-
-function MemberDashboard({
-  user,
-  profile,
-  apiKey,
-  keyInfo,
-  onLogout,
-}) {
-  const [copied, setCopied] = useState(false);
-
-  const limit =
-    keyInfo?.daily_limit ??
-    profile?.daily_limit ??
-    100;
-
-  const used =
-    keyInfo?.requests_today ??
-    profile?.requests_today ??
-    0;
-
-  const remaining = Math.max(
-    0,
-    limit - used
-  );
-
-  const expires =
-    keyInfo?.expires_at ??
-    profile?.expires_at;
-
-  const percent =
-    limit > 0
-      ? Math.min(
-          100,
-          Math.round(
-            (used / limit) * 100
-          )
-        )
-      : 0;
-
-  const copyKey = () => {
-    if (!apiKey) return;
-
-    copyText(apiKey);
-
-    setCopied(true);
-
-    setTimeout(
-      () => setCopied(false),
-      1500
-    );
-  };
-
-  return (
-    <div className="dashboard">
-
-      <div className="welcome">
-        <span>Welcome back,</span>
-
-        <h1>
-          {user?.email || "Member"} 👋
-        </h1>
-
-        <label>MEMBER</label>
-      </div>
-
-      {/* STATS */}
-
-      <div className="stats-grid">
-
-        <StatCard
-          title="REQUESTS TODAY"
-          value={used}
-          suffix={` / ${limit}`}
-          icon="⌁"
-          color="purple"
-        />
-
-        <StatCard
-          title="REMAINING"
-          value={remaining}
-          icon="◒"
-          color="blue"
-        />
-
-        <StatCard
-          title="EXPIRES"
-          value={
-            expires
-              ? formatDate(expires)
-              : "Unlimited"
-          }
-          icon="◷"
-          color="pink"
-        />
-
-        <StatCard
-          title="STATUS"
-          value={
-            expires &&
-            daysLeft(expires) <= 0
-              ? "Expired"
-              : "Active"
-          }
-          icon="✓"
-          color="green"
-        />
-
-      </div>
-
-      {/* API KEY */}
-
-      <div className="two-column">
-
-        <section className="panel">
-
-          <div className="panel-title">
-            <div>
-              <span className="eyebrow">
-                API ACCESS
-              </span>
-
-              <h2>
-                YOUR API KEY
-              </h2>
-            </div>
-
-            <button
-              className="small-button"
-              onClick={copyKey}
-            >
-              {copied ? "COPIED" : "COPY"}
-            </button>
-          </div>
-
-          <div className="key-box">
-            {apiKey || "API KEY BELUM DIBUAT"}
-          </div>
-
-          <p className="warning">
-            ⚠ Jangan bagikan API key kepada
-            siapapun.
-          </p>
-
-          <div className="usage">
-
-            <div className="usage-head">
-              <span>DAILY USAGE</span>
-
-              <strong>
-                {used} / {limit}
-              </strong>
-            </div>
-
-            <div className="progress">
-              <span
-                style={{
-                  width: `${percent}%`,
-                }}
-              />
-            </div>
-
-          </div>
-
-        </section>
-
-        {/* QUICK START */}
-
-        <section className="panel">
-
-          <div className="panel-title">
-
-            <div>
-              <span className="eyebrow">
-                QUICK START
-              </span>
-
-              <h2>
-                API REQUEST
-              </h2>
-            </div>
-
-            <button
-              className="small-button"
-              onClick={() =>
-                copyText(
-                  `curl -X GET "${API_BASE}/api/download/tiktok?url=VIDEO_URL" -H "x-api-key: ${apiKey || "YOUR_API_KEY"}"`
-                )
-              }
-            >
-              COPY
-            </button>
-
-          </div>
-
-          <pre className="code-box">
-{`curl -X GET "${API_BASE}/api/download/tiktok?url=VIDEO_URL" \\
--H "x-api-key: ${apiKey || "YOUR_API_KEY"}"`}
-          </pre>
-
-          <div className="code-note">
-            API key member otomatis digunakan
-            untuk request.
-          </div>
-
-        </section>
-
-      </div>
-
-      {/* ENDPOINTS */}
-
-      <section className="panel endpoints-panel">
-
-        <div className="panel-title">
-
-          <div>
-            <span className="eyebrow">
-              API SYSTEM
-            </span>
-
-            <h2>
-              AVAILABLE ENDPOINTS
-            </h2>
-          </div>
-
-          <span className="endpoint-count">
-            {ENDPOINTS.length} ENDPOINTS
-          </span>
-
-        </div>
-
-        <div className="endpoint-grid">
-
-          {ENDPOINTS.map(
-            (endpoint) => (
-              <EndpointCard
-                key={endpoint.path}
-                endpoint={endpoint}
-                apiKey={apiKey}
-              />
-            )
-          )}
-
-        </div>
-
-      </section>
-
-      {/* PROFILE */}
-
-      <section className="panel profile-panel">
-
-        <span className="eyebrow">
-          ACCOUNT
-        </span>
-
-        <h2>PROFILE</h2>
-
-        <div className="profile-grid">
-
-          <div>
-            <small>EMAIL</small>
-            <strong>
-              {user?.email}
-            </strong>
-          </div>
-
-          <div>
-            <small>ROLE</small>
-            <strong>
-              MEMBER
-            </strong>
-          </div>
-
-          <div>
-            <small>KEY STATUS</small>
-            <strong className="green-text">
-              ACTIVE
-            </strong>
-          </div>
-
-          <div>
-            <small>EXPIRES</small>
-            <strong>
-              {expires
-                ? formatDate(expires)
-                : "Unlimited"}
-            </strong>
-          </div>
-
-        </div>
-
-        <button
-          className="logout-button"
-          onClick={onLogout}
-        >
-          LOGOUT
-        </button>
-
-      </section>
-
-    </div>
-  );
-}
-
-/* =========================================================
-   ENDPOINT CARD
-========================================================= */
-
-function EndpointCard({
-  endpoint,
-  apiKey,
-}) {
-  const [open, setOpen] =
-    useState(false);
-
-  const [value, setValue] =
-    useState("");
-
-  const [loading, setLoading] =
-    useState(false);
-
-  const [result, setResult] =
-    useState(null);
-
-  const isPost =
-    endpoint.method === "POST";
-
-  const execute = async () => {
-    setLoading(true);
-    setResult(null);
-
-    try {
-      let url =
-        API_BASE +
-        endpoint.path;
-
-      if (!isPost && value) {
-        url +=
-          "?url=" +
-          encodeURIComponent(value);
-      }
-
-      const options = {
-        method: endpoint.method,
-        headers: {
-          "Content-Type":
-            "application/json",
-
-          ...(apiKey
-            ? {
-                "x-api-key":
-                  apiKey,
-              }
-            : {}),
-        },
-      };
-
-      if (isPost) {
-        options.body =
-          JSON.stringify({
-            message: value,
-          });
-      }
-
-      const response =
-        await fetch(
-          url,
-          options
-        );
-
-      const text =
-        await response.text();
-
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = text;
-      }
-
-      setResult({
-        status:
-          response.status,
-        data,
-      });
-    } catch (error) {
-      setResult({
-        status: "ERROR",
-        data: error.message,
-      });
-    }
-
-    setLoading(false);
-  };
-
-  return (
-    <div className="endpoint-card">
-
-      <div className="endpoint-head">
-
-        <div className="endpoint-icon">
-          {endpoint.icon}
-        </div>
-
-        <div className="endpoint-info">
-
-          <strong>
-            {endpoint.name}
-          </strong>
-
-          <code>
-            {endpoint.path}
-          </code>
-
-        </div>
-
-        <span
-          className={`method ${endpoint.method.toLowerCase()}`}
-        >
-          {endpoint.method}
-        </span>
-
-      </div>
-
-      <div className="endpoint-actions">
-
-        <button
-          onClick={() =>
-            setOpen(!open)
-          }
-        >
-          {open
-            ? "CLOSE"
-            : "TEST API"}
-        </button>
-
-      </div>
-
-      {open && (
-        <div className="tester">
-
-          <input
-            value={value}
-            onChange={(e) =>
-              setValue(
-                e.target.value
-              )
-            }
-            placeholder={
-              isPost
-                ? "Masukkan prompt..."
-                : "Masukkan URL..."
-            }
-          />
-
-          <button
-            className="run-button"
-            onClick={execute}
-            disabled={loading}
-          >
-            {loading
-              ? "REQUEST..."
-              : "RUN REQUEST"}
-          </button>
-
-          {result && (
-            <pre className="result-box">
-{JSON.stringify(
-  result,
-  null,
-  2
-)}
-            </pre>
-          )}
-
-        </div>
-      )}
-
-    </div>
-  );
-}
-
-/* =========================================================
-   ADMIN DASHBOARD
-========================================================= */
-
-function AdminDashboard({
-  members,
-  refreshMembers,
-}) {
-  const [search, setSearch] =
-    useState("");
-
-  const [selected, setSelected] =
-    useState(null);
-
-  const filtered =
-    members.filter((member) =>
-      member.email
-        ?.toLowerCase()
-        .includes(
-          search.toLowerCase()
-        )
-    );
-
-  const total =
-    members.length;
-
-  const active =
-    members.filter(
-      (m) =>
-        m.api_key &&
-        m.key_status !==
-          "inactive"
-    ).length;
-
-  const requests =
-    members.reduce(
-      (sum, m) =>
-        sum +
-        Number(
-          m.requests_today || 0
-        ),
-      0
-    );
-
-  const updateMember =
-    async () => {
-      if (!selected) return;
-
-      const {
-        error,
-      } = await supabase
-        .from("profiles")
-        .update({
-          daily_limit:
-            Number(
-              selected.daily_limit
-            ),
-          expires_at:
-            selected.expires_at ||
-            null,
-          key_status:
-            selected.key_status ||
-            "active",
-        })
-        .eq(
-          "id",
-          selected.id
-        );
-
-      if (error) {
-        alert(error.message);
-        return;
-      }
-
-      setSelected(null);
-
-      refreshMembers();
-    };
-
-  return (
-    <div className="dashboard admin-dashboard">
-
-      <div className="admin-header">
-
-        <div>
-          <span className="eyebrow">
-            ADMINISTRATION
-          </span>
-
-          <h1>
-            ADMIN DASHBOARD
-          </h1>
-
-          <p>
-            Kelola member, API key,
-            limit request dan akses
-            DIN API.
-          </p>
-        </div>
-
-        <div className="admin-badge">
-          🛡 ADMIN
-        </div>
-
-      </div>
-
-      {/* ADMIN STATS */}
-
-      <div className="stats-grid">
-
-        <StatCard
-          title="TOTAL MEMBERS"
-          value={total}
-          icon="♟"
-          color="purple"
-        />
-
-        <StatCard
-          title="ACTIVE KEYS"
-          value={active}
-          icon="🔑"
-          color="green"
-        />
-
-        <StatCard
-          title="REQUESTS TODAY"
-          value={requests}
-          icon="⌁"
-          color="blue"
-        />
-
-        <StatCard
-          title="SYSTEM STATUS"
-          value="ONLINE"
-          icon="✓"
-          color="pink"
-        />
-
-      </div>
-
-      <section className="panel">
-
-        <div className="panel-title">
-
-          <div>
-            <span className="eyebrow">
-              MANAGEMENT
-            </span>
-
-            <h2>
-              MEMBERS & API KEYS
-            </h2>
-          </div>
-
-          <button
-            className="small-button"
-            onClick={refreshMembers}
-          >
-            REFRESH
-          </button>
-
-        </div>
-
-        <input
-          className="search-input"
-          placeholder="Search Gmail member..."
-          value={search}
-          onChange={(e) =>
-            setSearch(
-              e.target.value
-            )
-          }
-        />
-
-        <div className="member-table">
-
-          <div className="table-head">
-            <span>EMAIL</span>
-            <span>KEY</span>
-            <span>STATUS</span>
-            <span>LIMIT</span>
-            <span>USED</span>
-            <span>EXPIRES</span>
-            <span>ACTION</span>
-          </div>
-
-          {filtered.map(
-            (member) => (
-              <div
-                className="table-row"
-                key={member.id}
-              >
-
-                <span>
-                  {member.email}
-                </span>
-
-                <span className="key-short">
-                  {member.api_key
-                    ? member.api_key.slice(
-                        0,
-                        18
-                      ) + "..."
-                    : "-"}
-                </span>
-
-                <span>
-                  <b
-                    className={
-                      member.key_status ===
-                      "inactive"
-                        ? "status-red"
-                        : "status-green"
-                    }
-                  >
-                    {member.key_status ||
-                      "ACTIVE"}
-                  </b>
-                </span>
-
-                <span>
-                  {member.daily_limit ||
-                    100}
-                </span>
-
-                <span>
-                  {member.requests_today ||
-                    0}
-                </span>
-
-                <span>
-                  {formatDate(
-                    member.expires_at
-                  )}
-                </span>
-
-                <span>
-
-                  <button
-                    className="edit-button"
-                    onClick={() =>
-                      setSelected({
-                        ...member,
-                      })
-                    }
-                  >
-                    EDIT
-                  </button>
-
-                </span>
-
-              </div>
-            )
-          )}
-
-          {filtered.length ===
-            0 && (
-            <div className="empty">
-              Tidak ada member.
-            </div>
-          )}
-
-        </div>
-
-      </section>
-
-      {/* EDIT MEMBER */}
-
-      {selected && (
-        <div className="modal-bg">
-
-          <div className="modal">
-
-            <button
-              className="modal-close"
-              onClick={() =>
-                setSelected(null)
-              }
-            >
-              ×
-            </button>
-
-            <span className="eyebrow">
-              MEMBER CONTROL
-            </span>
-
-            <h2>
-              EDIT MEMBER
-            </h2>
-
-            <p className="modal-email">
-              {selected.email}
-            </p>
-
-            <label>
-              LIMIT REQUEST / HARI
-            </label>
-
-            <input
-              type="number"
-              value={
-                selected.daily_limit ??
-                100
-              }
-              onChange={(e) =>
-                setSelected({
-                  ...selected,
-                  daily_limit:
-                    e.target.value,
-                })
-              }
-            />
-
-            <label>
-              EXPIRED DATE
-            </label>
-
-            <input
-              type="date"
-              value={
-                selected.expires_at
-                  ? selected.expires_at.slice(
-                      0,
-                      10
-                    )
-                  : ""
-              }
-              onChange={(e) =>
-                setSelected({
-                  ...selected,
-                  expires_at:
-                    e.target.value
-                      ? new Date(
-                          e.target.value
-                        ).toISOString()
-                      : null,
-                })
-              }
-            />
-
-            <label>
-              KEY STATUS
-            </label>
-
-            <select
-              value={
-                selected.key_status ||
-                "active"
-              }
-              onChange={(e) =>
-                setSelected({
-                  ...selected,
-                  key_status:
-                    e.target.value,
-                })
-              }
-            >
-              <option value="active">
-                ACTIVE
-              </option>
-
-              <option value="inactive">
-                INACTIVE
-              </option>
-            </select>
-
-            <button
-              className="save-button"
-              onClick={updateMember}
-            >
-              SAVE CHANGES
-            </button>
-
-          </div>
-
-        </div>
-      )}
-
+    <div className="robot-icon">
+      <span className="robot-eye left" />
+      <span className="robot-eye right" />
+      <span className="robot-mouth" />
     </div>
   );
 }
@@ -1013,761 +601,2306 @@ function AdminDashboard({
 ========================================================= */
 
 export default function App() {
+  const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
+  const [apiKey, setApiKey] = useState(null);
 
-  const [session, setSession] =
-    useState(null);
+  const [loading, setLoading] = useState(true);
+  const [authMode, setAuthMode] = useState("login");
 
-  const [profile, setProfile] =
-    useState(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [apiKey, setApiKey] =
-    useState("");
+  const [resetSent, setResetSent] = useState(false);
 
-  const [keyInfo, setKeyInfo] =
-    useState(null);
+  const [authError, setAuthError] = useState("");
+  const [authMessage, setAuthMessage] = useState("");
 
-  const [members, setMembers] =
-    useState([]);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [page, setPage] = useState("dashboard");
 
-  const [loading, setLoading] =
-    useState(true);
+  const [search, setSearch] = useState("");
+  const [openCategory, setOpenCategory] = useState("AI");
 
-  const [page, setPage] =
-    useState("dashboard");
+  const [openEndpoint, setOpenEndpoint] = useState(null);
+  const [params, setParams] = useState({});
+  const [responses, setResponses] = useState({});
+  const [requestLoading, setRequestLoading] = useState({});
 
-  const [menuOpen, setMenuOpen] =
-    useState(false);
+  const [members, setMembers] = useState([]);
+  const [memberLoading, setMemberLoading] = useState(false);
 
-  /* =====================================================
-     AUTH
-  ===================================================== */
+  const totalEndpoints = API_CATEGORIES.reduce(
+    (total, category) => total + category.endpoints.length,
+    0
+  );
+
+  /* =======================================================
+     INITIAL SESSION
+  ======================================================= */
 
   useEffect(() => {
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
 
     let mounted = true;
 
-    supabase.auth
-      .getSession()
-      .then(
-        ({
-          data,
-        }) => {
+    const loadSession = async () => {
+      const {
+        data: { session: currentSession },
+      } = await supabase.auth.getSession();
 
-          if (!mounted)
-            return;
+      if (!mounted) return;
 
-          setSession(
-            data.session
-          );
+      setSession(currentSession);
 
-          setLoading(false);
-        }
-      );
+      if (currentSession?.user) {
+        await loadUserData(currentSession.user);
+      }
 
-    const {
-      data: listener,
-    } =
-      supabase.auth.onAuthStateChange(
-        (_event, session) => {
-
-          setSession(session);
-
-          if (!session) {
-            setProfile(null);
-            setApiKey("");
-            setKeyInfo(null);
-          }
-        }
-      );
-
-    return () => {
-      mounted = false;
-
-      listener.subscription.unsubscribe();
+      setLoading(false);
     };
 
-  }, []);
-
-  /* =====================================================
-     LOAD USER
-  ===================================================== */
-
-  useEffect(() => {
-
-    if (!session?.user)
-      return;
-
-    loadUser(
-      session.user
-    );
-
-  }, [session]);
-
-  async function loadUser(
-    user
-  ) {
-
-    setLoading(true);
+    loadSession();
 
     const {
-      data: profileData,
-    } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq(
-        "id",
-        user.id
-      )
-      .maybeSingle();
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      async (_event, newSession) => {
+        if (!mounted) return;
 
-    setProfile(
-      profileData || {
-        role: "member",
-        email: user.email,
+        setSession(newSession);
+
+        if (newSession?.user) {
+          await loadUserData(newSession.user);
+        } else {
+          setProfile(null);
+          setApiKey(null);
+        }
       }
     );
 
-    /* GET API KEY */
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
-    const {
-      data: keyData,
-    } = await supabase
-      .from("api_keys")
-      .select("*")
-      .eq(
-        "user_id",
-        user.id
-      )
-      .eq(
-        "status",
-        "active"
-      )
-      .order(
-        "created_at",
-        {
-          ascending: false,
-        }
-      )
-      .limit(1)
-      .maybeSingle();
+  /* =======================================================
+     LOAD PROFILE + KEY
+  ======================================================= */
 
-    if (keyData) {
+  async function loadUserData(user) {
+    if (!supabase || !user) return;
 
-      setApiKey(
-        keyData.api_key
+    try {
+      const { data: profileData, error: profileError } =
+        await supabase
+          .from("profiles")
+          .select("*")
+          .eq("id", user.id)
+          .maybeSingle();
+
+      if (profileError) {
+        console.error(profileError);
+      }
+
+      let currentProfile = profileData;
+
+      /*
+       * Jika user sudah ada tetapi profile belum dibuat,
+       * buat profile dari frontend.
+       *
+       * API key akan dibuat jika policy/trigger database
+       * sudah aktif.
+       */
+      if (!currentProfile) {
+        const { data: createdProfile } = await supabase
+          .from("profiles")
+          .insert({
+            id: user.id,
+            email: user.email,
+            role: "member",
+            status: "active",
+            daily_limit: 100,
+            requests_today: 0,
+          })
+          .select()
+          .single();
+
+        currentProfile = createdProfile;
+      }
+
+      setProfile(currentProfile);
+
+      const { data: keyData, error: keyError } =
+        await supabase
+          .from("api_keys")
+          .select("*")
+          .eq("user_id", user.id)
+          .eq("active", true)
+          .maybeSingle();
+
+      if (keyError) {
+        console.error(keyError);
+      }
+
+      setApiKey(keyData || null);
+
+      if (
+        currentProfile?.role === "admin" &&
+        page === "dashboard"
+      ) {
+        setPage("dashboard");
+      }
+    } catch (error) {
+      console.error("LOAD USER ERROR:", error);
+    }
+  }
+
+  /* =======================================================
+     AUTH
+  ======================================================= */
+
+  function clearAuthMessages() {
+    setAuthError("");
+    setAuthMessage("");
+  }
+
+  async function handleLogin(e) {
+    e.preventDefault();
+
+    clearAuthMessages();
+
+    if (!supabase) {
+      setAuthError(
+        "Supabase belum dikonfigurasi. Tambahkan VITE_SUPABASE_URL dan VITE_SUPABASE_ANON_KEY."
       );
+      return;
+    }
 
-      setKeyInfo(
-        keyData
+    if (!email || !password) {
+      setAuthError("Email dan password wajib diisi.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.signInWithPassword({
+      email: email.trim(),
+      password,
+    });
+
+    if (error) {
+      setAuthError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setAuthMessage("Login berhasil.");
+
+    setPassword("");
+
+    setLoading(false);
+  }
+
+  async function handleRegister(e) {
+    e.preventDefault();
+
+    clearAuthMessages();
+
+    if (!supabase) {
+      setAuthError(
+        "Supabase belum dikonfigurasi."
       );
+      return;
+    }
 
+    if (!email || !password) {
+      setAuthError("Email dan password wajib diisi.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setAuthError(
+        "Password minimal 6 karakter."
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setAuthError(
+        "Konfirmasi password tidak sama."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    const { data, error } =
+      await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+      });
+
+    if (error) {
+      setAuthError(error.message);
+      setLoading(false);
+      return;
+    }
+
+    setPassword("");
+    setConfirmPassword("");
+
+    if (data.session) {
+      setAuthMessage("Register berhasil.");
+    } else {
+      setAuthMessage(
+        "Register berhasil. Silakan cek email untuk verifikasi akun."
+      );
     }
 
     setLoading(false);
   }
 
-  /* =====================================================
-     ADMIN MEMBERS
-  ===================================================== */
+  async function handleGoogleLogin() {
+    clearAuthMessages();
 
-  async function loadMembers() {
-
-    if (
-      profile?.role !==
-      "admin"
-    ) {
+    if (!supabase) {
+      setAuthError(
+        "Supabase belum dikonfigurasi."
+      );
       return;
     }
 
-    const {
-      data,
-      error,
-    } = await supabase
-      .from("profiles")
-      .select(
-        `
-        *,
-        api_keys (
-          api_key,
-          status,
-          daily_limit,
-          requests_today,
-          expires_at
-        )
-        `
-      )
-      .order(
-        "created_at",
+    const { error } =
+      await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: window.location.origin,
+        },
+      });
+
+    if (error) {
+      setAuthError(error.message);
+    }
+  }
+
+  async function handleResetPassword(e) {
+    e.preventDefault();
+
+    clearAuthMessages();
+
+    if (!supabase) {
+      setAuthError(
+        "Supabase belum dikonfigurasi."
+      );
+      return;
+    }
+
+    if (!email) {
+      setAuthError("Masukkan email terlebih dahulu.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } =
+      await supabase.auth.resetPasswordForEmail(
+        email.trim(),
         {
-          ascending: false,
+          redirectTo:
+            `${window.location.origin}/`,
         }
       );
 
     if (error) {
-      console.error(error);
-      return;
+      setAuthError(error.message);
+    } else {
+      setResetSent(true);
+      setAuthMessage(
+        "Link reset password sudah dikirim ke email."
+      );
     }
 
-    const formatted =
-      (data || []).map(
-        (member) => {
-
-          const key =
-            Array.isArray(
-              member.api_keys
-            )
-              ? member.api_keys[0]
-              : member.api_keys;
-
-          return {
-            ...member,
-            api_key:
-              key?.api_key ||
-              "",
-            key_status:
-              key?.status ||
-              "inactive",
-            daily_limit:
-              key?.daily_limit ??
-              member.daily_limit ??
-              100,
-            requests_today:
-              key?.requests_today ??
-              0,
-            expires_at:
-              key?.expires_at ||
-              member.expires_at,
-          };
-        }
-      );
-
-    setMembers(
-      formatted
-    );
+    setLoading(false);
   }
 
-  useEffect(() => {
-
-    if (
-      profile?.role ===
-      "admin"
-    ) {
-      loadMembers();
+  async function handleLogout() {
+    if (supabase) {
+      await supabase.auth.signOut();
     }
-
-  }, [profile]);
-
-  /* =====================================================
-     LOGOUT
-  ===================================================== */
-
-  async function logout() {
-    await supabase.auth.signOut();
 
     setSession(null);
     setProfile(null);
-    setApiKey("");
-
+    setApiKey(null);
+    setMembers([]);
     setPage("dashboard");
   }
 
-  /* =====================================================
+  /* =======================================================
+     COPY API KEY
+  ======================================================= */
+
+  async function copyApiKey() {
+    if (!apiKey?.api_key) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        apiKey.api_key
+      );
+
+      alert("API Key berhasil disalin.");
+    } catch {
+      alert("Gagal menyalin API Key.");
+    }
+  }
+
+  /* =======================================================
+     SEARCH
+  ======================================================= */
+
+  const filteredCategories = useMemo(() => {
+    const keyword = search
+      .trim()
+      .toLowerCase();
+
+    if (!keyword) {
+      return API_CATEGORIES;
+    }
+
+    return API_CATEGORIES
+      .map((category) => {
+        const categoryMatch =
+          category.name
+            .toLowerCase()
+            .includes(keyword);
+
+        const endpoints =
+          category.endpoints.filter(
+            (endpoint) =>
+              endpoint.name
+                .toLowerCase()
+                .includes(keyword) ||
+              endpoint.path
+                .toLowerCase()
+                .includes(keyword) ||
+              endpoint.description
+                .toLowerCase()
+                .includes(keyword)
+          );
+
+        if (categoryMatch) {
+          return category;
+        }
+
+        if (endpoints.length) {
+          return {
+            ...category,
+            endpoints,
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean);
+  }, [search]);
+
+  /* =======================================================
+     API TESTER
+  ======================================================= */
+
+  function toggleEndpoint(
+    categoryName,
+    endpoint
+  ) {
+    const key =
+      `${categoryName}:${endpoint.name}`;
+
+    if (openEndpoint === key) {
+      setOpenEndpoint(null);
+      return;
+    }
+
+    setOpenEndpoint(key);
+
+    const initial = {};
+
+    endpoint.params.forEach((param) => {
+      initial[param.name] = "";
+    });
+
+    setParams((old) => ({
+      ...old,
+      [key]: initial,
+    }));
+  }
+
+  function updateParam(
+    endpointKey,
+    paramName,
+    value
+  ) {
+    setParams((old) => ({
+      ...old,
+      [endpointKey]: {
+        ...(old[endpointKey] || {}),
+        [paramName]: value,
+      },
+    }));
+  }
+
+  async function executeEndpoint(
+    category,
+    endpoint
+  ) {
+    const endpointKey =
+      `${category.name}:${endpoint.name}`;
+
+    const values =
+      params[endpointKey] || {};
+
+    for (const param of endpoint.params) {
+      if (
+        param.required &&
+        !String(values[param.name] || "").trim()
+      ) {
+        setResponses((old) => ({
+          ...old,
+          [endpointKey]: {
+            success: false,
+            error:
+              `Parameter "${param.name}" wajib diisi.`,
+          },
+        }));
+
+        return;
+      }
+    }
+
+    setRequestLoading((old) => ({
+      ...old,
+      [endpointKey]: true,
+    }));
+
+    try {
+      const query = new URLSearchParams();
+
+      Object.entries(values).forEach(
+        ([key, value]) => {
+          if (
+            value !== undefined &&
+            value !== null &&
+            String(value).trim() !== ""
+          ) {
+            query.set(key, value);
+          }
+        }
+      );
+
+      /*
+       * API key otomatis ikut dikirim.
+       */
+      if (apiKey?.api_key) {
+        query.set(
+          "apikey",
+          apiKey.api_key
+        );
+      }
+
+      const url =
+        `${API_BASE}${endpoint.path}` +
+        (query.toString()
+          ? `?${query.toString()}`
+          : "");
+
+      const response =
+        await fetch(url, {
+          method: endpoint.method || "GET",
+          headers: {
+            "x-api-key":
+              apiKey?.api_key || "",
+            Accept:
+              "application/json",
+          },
+        });
+
+      const contentType =
+        response.headers.get(
+          "content-type"
+        ) || "";
+
+      let result;
+
+      if (
+        contentType.includes(
+          "application/json"
+        )
+      ) {
+        result = await response.json();
+      } else {
+        result = await response.text();
+      }
+
+      setResponses((old) => ({
+        ...old,
+        [endpointKey]: {
+          http_status: response.status,
+          success: response.ok,
+          data: result,
+        },
+      }));
+
+      /*
+       * Refresh data member setelah request.
+       */
+      if (session?.user) {
+        await loadUserData(session.user);
+      }
+    } catch (error) {
+      setResponses((old) => ({
+        ...old,
+        [endpointKey]: {
+          success: false,
+          error: error.message,
+        },
+      }));
+    } finally {
+      setRequestLoading((old) => ({
+        ...old,
+        [endpointKey]: false,
+      }));
+    }
+  }
+
+  /* =======================================================
+     ADMIN
+  ======================================================= */
+
+  async function loadMembers() {
+    if (!supabase) return;
+
+    if (profile?.role !== "admin") {
+      return;
+    }
+
+    setMemberLoading(true);
+
+    const { data, error } =
+      await supabase
+        .from("profiles")
+        .select("*")
+        .order("created_at", {
+          ascending: false,
+        });
+
+    if (!error) {
+      setMembers(data || []);
+    } else {
+      console.error(error);
+    }
+
+    setMemberLoading(false);
+  }
+
+  async function changeMemberLimit(
+    memberId,
+    value
+  ) {
+    if (!supabase) return;
+
+    const limit =
+      Number(value);
+
+    if (
+      !Number.isFinite(limit) ||
+      limit < 0
+    ) {
+      return;
+    }
+
+    const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          daily_limit: limit,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", memberId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadMembers();
+  }
+
+  async function changeMemberStatus(
+    memberId,
+    status
+  ) {
+    if (!supabase) return;
+
+    const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          status,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", memberId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadMembers();
+  }
+
+  async function resetMemberRequests(
+    memberId
+  ) {
+    if (!supabase) return;
+
+    const { error } =
+      await supabase
+        .from("profiles")
+        .update({
+          requests_today: 0,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", memberId);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    await loadMembers();
+  }
+
+  useEffect(() => {
+    if (
+      page === "admin" &&
+      profile?.role === "admin"
+    ) {
+      loadMembers();
+    }
+  }, [page, profile?.role]);
+
+  /* =======================================================
      LOADING
-  ===================================================== */
+  ======================================================= */
 
-  if (loading) {
+  if (loading && !session) {
     return (
-      <div className="loading-screen">
+      <div className="app">
+        <div className="auth-screen">
+          <div className="auth-card loading-card">
+            <RobotIcon />
 
-        <div className="loading-logo">
-          DIN API🔥
+            <h1>DIN API</h1>
+
+            <p>
+              SYSTEM INITIALIZING...
+            </p>
+
+            <div className="loading-line">
+              <span />
+            </div>
+          </div>
         </div>
-
-        <div className="loading-bar">
-          <span />
-        </div>
-
-        <p>
-          INITIALIZING SYSTEM...
-        </p>
-
       </div>
     );
   }
 
-  /* =====================================================
-     BELUM LOGIN
-  ===================================================== */
+  /* =======================================================
+     CONFIG ERROR
+  ======================================================= */
 
-  if (!session) {
+  if (!supabase) {
     return (
-      <LoginScreen />
+      <div className="app">
+        <div className="auth-screen">
+          <div className="auth-card">
+            <RobotIcon />
+
+            <div className="auth-brand">
+              <small>DIN API</small>
+              <h1>CONFIG ERROR</h1>
+            </div>
+
+            <div className="auth-alert error">
+              Supabase belum dikonfigurasi.
+              Tambahkan:
+              <br />
+              <br />
+              <code>
+                VITE_SUPABASE_URL
+              </code>
+              <br />
+              <code>
+                VITE_SUPABASE_ANON_KEY
+              </code>
+            </div>
+          </div>
+        </div>
+      </div>
     );
   }
 
-  const isAdmin =
-    profile?.role ===
-    "admin";
+  /* =======================================================
+     AUTH SCREEN
+  ======================================================= */
+
+  if (!session) {
+    return (
+      <div className="app">
+        <div className="background-grid" />
+        <div className="scanlines" />
+
+        <div className="auth-screen">
+
+          <div className="auth-decoration">
+            <div className="auth-orbit" />
+          </div>
+
+          <div className="auth-card">
+
+            <div className="auth-logo">
+              <RobotIcon />
+            </div>
+
+            <div className="auth-brand">
+              <small>ROBOT API SYSTEM</small>
+
+              <h1>DIN API</h1>
+
+              <span>
+                SECURE DEVELOPER PLATFORM
+              </span>
+            </div>
+
+            {authMode !== "reset" && (
+              <div className="auth-tabs">
+                <button
+                  className={
+                    authMode === "login"
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() => {
+                    clearAuthMessages();
+                    setAuthMode("login");
+                  }}
+                >
+                  LOGIN
+                </button>
+
+                <button
+                  className={
+                    authMode === "register"
+                      ? "active"
+                      : ""
+                  }
+                  onClick={() => {
+                    clearAuthMessages();
+                    setAuthMode("register");
+                  }}
+                >
+                  DAFTAR
+                </button>
+              </div>
+            )}
+
+            {authMode === "reset" ? (
+              <form
+                className="auth-form"
+                onSubmit={
+                  handleResetPassword
+                }
+              >
+                <div className="auth-heading">
+                  <h2>LUPA PASSWORD</h2>
+
+                  <p>
+                    Masukkan email untuk
+                    menerima link reset password.
+                  </p>
+                </div>
+
+                <label>
+                  EMAIL
+
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) =>
+                      setEmail(e.target.value)
+                    }
+                    placeholder="nama@email.com"
+                    autoComplete="email"
+                  />
+                </label>
+
+                {authError && (
+                  <div className="auth-alert error">
+                    {authError}
+                  </div>
+                )}
+
+                {authMessage && (
+                  <div className="auth-alert success">
+                    {authMessage}
+                  </div>
+                )}
+
+                <button
+                  className="auth-submit"
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading
+                    ? "PROCESSING..."
+                    : "KIRIM LINK RESET"}
+                </button>
+
+                <button
+                  type="button"
+                  className="auth-link-button"
+                  onClick={() => {
+                    clearAuthMessages();
+                    setResetSent(false);
+                    setAuthMode("login");
+                  }}
+                >
+                  ← Kembali ke Login
+                </button>
+              </form>
+            ) : (
+              <form
+                className="auth-form"
+                onSubmit={
+                  authMode === "login"
+                    ? handleLogin
+                    : handleRegister
+                }
+              >
+                <div className="auth-heading">
+                  <h2>
+                    {authMode === "login"
+                      ? "SELAMAT DATANG"
+                      : "BUAT AKUN"}
+                  </h2>
+
+                  <p>
+                    {authMode === "login"
+                      ? "Login untuk mengakses DIN API."
+                      : "Daftar untuk mendapatkan API Key otomatis."}
+                  </p>
+                </div>
+
+                <label>
+                  EMAIL
+
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) =>
+                      setEmail(e.target.value)
+                    }
+                    placeholder="nama@email.com"
+                    autoComplete="email"
+                  />
+                </label>
+
+                <label>
+                  PASSWORD
+
+                  <input
+                    type="password"
+                    value={password}
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
+                    placeholder="••••••••"
+                    autoComplete={
+                      authMode === "login"
+                        ? "current-password"
+                        : "new-password"
+                    }
+                  />
+                </label>
+
+                {authMode === "register" && (
+                  <label>
+                    KONFIRMASI PASSWORD
+
+                    <input
+                      type="password"
+                      value={confirmPassword}
+                      onChange={(e) =>
+                        setConfirmPassword(
+                          e.target.value
+                        )
+                      }
+                      placeholder="••••••••"
+                      autoComplete="new-password"
+                    />
+                  </label>
+                )}
+
+                {authError && (
+                  <div className="auth-alert error">
+                    {authError}
+                  </div>
+                )}
+
+                {authMessage && (
+                  <div className="auth-alert success">
+                    {authMessage}
+                  </div>
+                )}
+
+                <button
+                  className="auth-submit"
+                  type="submit"
+                  disabled={loading}
+                >
+                  {loading
+                    ? "PROCESSING..."
+                    : authMode === "login"
+                    ? "LOGIN"
+                    : "BUAT AKUN"}
+                </button>
+
+                <div className="auth-divider">
+                  <span>ATAU</span>
+                </div>
+
+                <button
+                  type="button"
+                  className="google-button"
+                  onClick={
+                    handleGoogleLogin
+                  }
+                >
+                  <span className="google-icon">
+                    G
+                  </span>
+
+                  Lanjutkan dengan Google
+                </button>
+
+                {authMode === "login" && (
+                  <button
+                    type="button"
+                    className="forgot-button"
+                    onClick={() => {
+                      clearAuthMessages();
+                      setAuthMode("reset");
+                    }}
+                  >
+                    Lupa Password?
+                  </button>
+                )}
+              </form>
+            )}
+
+            <div className="auth-footer">
+              DIN API • SECURE ACCESS
+            </div>
+
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  /* =======================================================
+     DASHBOARD DATA
+  ======================================================= */
+
+  const requestUsed =
+    Number(profile?.requests_today || 0);
+
+  const dailyLimit =
+    Number(profile?.daily_limit || 0);
+
+  const remaining =
+    Math.max(
+      dailyLimit - requestUsed,
+      0
+    );
+
+  const usagePercent =
+    dailyLimit > 0
+      ? Math.min(
+          (requestUsed / dailyLimit) * 100,
+          100
+        )
+      : 0;
+
+  /* =======================================================
+     MAIN APP
+  ======================================================= */
 
   return (
     <div className="app">
 
-      <div className="grid-bg" />
+      <div className="background-grid" />
+      <div className="scanlines" />
 
-      <header className="topbar">
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
 
-        <button
-          className="mobile-menu"
-          onClick={() =>
-            setMenuOpen(
-              !menuOpen
-            )
-          }
-        >
-          ☰
-        </button>
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-        <Logo />
+      <header className="header">
 
-        <div className="top-right">
+        <div className="header-left">
 
-          <div className="online">
+          <button
+            className={`menu-button ${
+              menuOpen ? "active" : ""
+            }`}
+            onClick={() =>
+              setMenuOpen(true)
+            }
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+
+          <div className="header-brand">
+            <RobotIcon />
+
+            <div>
+              <strong>
+                DIN API🔥
+              </strong>
+
+              <small>
+                ROBOT SYSTEM
+              </small>
+            </div>
+          </div>
+
+        </div>
+
+        <div className="header-right">
+
+          <div className="connection">
             <span />
             ONLINE
           </div>
 
-          <div className="user-mini">
-            {session.user.email}
+          <div className="version">
+            {profile?.role === "admin"
+              ? "ADMIN"
+              : "MEMBER"}
           </div>
 
         </div>
 
       </header>
 
+      {/* =====================================================
+          OVERLAY
+      ===================================================== */}
+
       <div
-        className={`app-layout ${
-          menuOpen
-            ? "menu-open"
-            : ""
+        className={`nav-overlay ${
+          menuOpen ? "show" : ""
+        }`}
+        onClick={() =>
+          setMenuOpen(false)
+        }
+      />
+
+      {/* =====================================================
+          SIDEBAR
+      ===================================================== */}
+
+      <aside
+        className={`side-nav ${
+          menuOpen ? "open" : ""
         }`}
       >
 
-        {/* SIDEBAR */}
+        <div className="side-top">
 
-        <aside className="sidebar">
+          <div>
+            <small>
+              NAVIGATION
+            </small>
 
-          <Logo />
-
-          <nav>
-
-            <button
-              className={
-                page ===
-                "dashboard"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage(
-                  "dashboard"
-                )
-              }
-            >
-              <span>⌂</span>
-              Dashboard
-            </button>
-
-            <button
-              className={
-                page === "keys"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage("keys")
-              }
-            >
-              <span>🔑</span>
-              API Key
-            </button>
-
-            <button
-              className={
-                page ===
-                "endpoints"
-                  ? "active"
-                  : ""
-              }
-              onClick={() =>
-                setPage(
-                  "endpoints"
-                )
-              }
-            >
-              <span>⌁</span>
-              Requests
-            </button>
-
-            {isAdmin && (
-              <button
-                className={
-                  page === "admin"
-                    ? "active admin-nav"
-                    : "admin-nav"
-                }
-                onClick={() =>
-                  setPage("admin")
-                }
-              >
-                <span>🛡</span>
-                Admin Panel
-              </button>
-            )}
-
-          </nav>
-
-          <div className="sidebar-bottom">
-
-            <span>
-              {isAdmin
-                ? "ADMINISTRATOR"
-                : "MEMBER"}
-            </span>
-
-            <button
-              onClick={logout}
-            >
-              ↪ Logout
-            </button>
-
+            <h2>
+              DIN API🔥
+            </h2>
           </div>
 
-        </aside>
+          <button
+            className="close-button"
+            onClick={() =>
+              setMenuOpen(false)
+            }
+          >
+            ×
+          </button>
 
-        {/* CONTENT */}
-
-        <main className="content">
-
-          {page ===
-            "admin" &&
-          isAdmin ? (
-            <AdminDashboard
-              members={
-                members
-              }
-              refreshMembers={
-                loadMembers
-              }
-            />
-          ) : page ===
-            "keys" ? (
-
-            <MemberDashboard
-              user={
-                session.user
-              }
-              profile={
-                profile
-              }
-              apiKey={
-                apiKey
-              }
-              keyInfo={
-                keyInfo
-              }
-              onLogout={
-                logout
-              }
-            />
-
-          ) : page ===
-            "endpoints" ? (
-
-            <div className="dashboard">
-
-              <div className="welcome">
-                <span>
-                  API SYSTEM
-                </span>
-
-                <h1>
-                  ENDPOINTS
-                </h1>
-              </div>
-
-              <section className="panel">
-
-                <div className="endpoint-grid">
-
-                  {ENDPOINTS.map(
-                    (endpoint) => (
-                      <EndpointCard
-                        key={
-                          endpoint.path
-                        }
-                        endpoint={
-                          endpoint
-                        }
-                        apiKey={
-                          apiKey
-                        }
-                      />
-                    )
-                  )}
-
-                </div>
-
-              </section>
-
-            </div>
-
-          ) : (
-
-            <MemberDashboard
-              user={
-                session.user
-              }
-              profile={
-                profile
-              }
-              apiKey={
-                apiKey
-              }
-              keyInfo={
-                keyInfo
-              }
-              onLogout={
-                logout
-              }
-            />
-
-          )}
-
-        </main>
-
-      </div>
-
-    </div>
-  );
-}
-
-/* =========================================================
-   LOGIN
-========================================================= */
-
-function LoginScreen() {
-
-  const [
-    mode,
-    setMode,
-  ] = useState("login");
-
-  const [
-    email,
-    setEmail,
-  ] = useState("");
-
-  const [
-    password,
-    setPassword,
-  ] = useState("");
-
-  const [
-    loading,
-    setLoading,
-  ] = useState(false);
-
-  const [
-    message,
-    setMessage,
-  ] = useState("");
-
-  async function submit(e) {
-
-    e.preventDefault();
-
-    setLoading(true);
-    setMessage("");
-
-    if (mode === "register") {
-
-      const {
-        error,
-      } =
-        await supabase.auth
-          .signUp({
-            email,
-            password,
-          });
-
-      if (error) {
-        setMessage(
-          error.message
-        );
-      } else {
-        setMessage(
-          "Akun berhasil dibuat. Silakan cek email jika verifikasi diperlukan."
-        );
-
-        setMode("login");
-      }
-
-    } else {
-
-      const {
-        error,
-      } =
-        await supabase.auth
-          .signInWithPassword({
-            email,
-            password,
-          });
-
-      if (error) {
-        setMessage(
-          error.message
-        );
-      }
-    }
-
-    setLoading(false);
-  }
-
-  async function googleLogin() {
-
-    await supabase.auth.signInWithOAuth(
-      {
-        provider: "google",
-        options: {
-          redirectTo:
-            window.location.origin,
-        },
-      }
-    );
-  }
-
-  return (
-    <div className="login-screen">
-
-      <div className="login-grid" />
-
-      <div className="login-card">
-
-        <div className="login-logo">
-          <Logo />
         </div>
 
-        <span className="eyebrow">
-          SECURE ACCESS
-        </span>
+        <div className="side-line" />
 
-        <h1>
-          {mode ===
-          "register"
-            ? "Create Account"
-            : "Welcome Back"}
-        </h1>
+        <nav className="nav-list">
 
-        <p>
-          Masuk ke DIN API
-          dashboard untuk
-          mengakses API key dan
-          endpoint.
-        </p>
+          <button
+            className={`nav-item ${
+              page === "dashboard"
+                ? "home"
+                : ""
+            }`}
+            onClick={() => {
+              setPage("dashboard");
+              setMenuOpen(false);
+            }}
+          >
+            <span className="nav-icon">
+              ⌂
+            </span>
 
-        <button
-          className="google-button"
-          onClick={
-            googleLogin
-          }
-        >
-          <b>G</b>
-          Continue with Google
-        </button>
+            <b>
+              DASHBOARD
+            </b>
 
-        <div className="or">
-          <span />
-          OR
-          <span />
-        </div>
+            <small>
+              00
+            </small>
+          </button>
 
-        <form
-          onSubmit={
-            submit
-          }
-        >
+          <button
+            className={`nav-item ${
+              page === "docs"
+                ? "home"
+                : ""
+            }`}
+            onClick={() => {
+              setPage("docs");
+              setMenuOpen(false);
+            }}
+          >
+            <span className="nav-icon green">
+              ◈
+            </span>
 
-          <label>
-            EMAIL
-          </label>
+            <b>
+              API DOCS
+            </b>
 
-          <input
-            type="email"
-            value={email}
-            onChange={(e) =>
-              setEmail(
-                e.target.value
-              )
-            }
-            placeholder="you@gmail.com"
-            required
-          />
+            <small>
+              01
+            </small>
+          </button>
 
-          <label>
-            PASSWORD
-          </label>
+          <button
+            className={`nav-item ${
+              page === "apikey"
+                ? "home"
+                : ""
+            }`}
+            onClick={() => {
+              setPage("apikey");
+              setMenuOpen(false);
+            }}
+          >
+            <span className="nav-icon cyan">
+              🔑
+            </span>
 
-          <input
-            type="password"
-            value={password}
-            onChange={(e) =>
-              setPassword(
-                e.target.value
-              )
-            }
-            placeholder="••••••••"
-            minLength={6}
-            required
-          />
+            <b>
+              API KEY
+            </b>
 
-          {message && (
-            <div className="login-message">
-              {message}
-            </div>
+            <small>
+              02
+            </small>
+          </button>
+
+          <button
+            className={`nav-item ${
+              page === "profile"
+                ? "home"
+                : ""
+            }`}
+            onClick={() => {
+              setPage("profile");
+              setMenuOpen(false);
+            }}
+          >
+            <span className="nav-icon blue">
+              ◉
+            </span>
+
+            <b>
+              PROFILE
+            </b>
+
+            <small>
+              03
+            </small>
+          </button>
+
+          {profile?.role === "admin" && (
+            <button
+              className={`nav-item ${
+                page === "admin"
+                  ? "home"
+                  : ""
+              }`}
+              onClick={() => {
+                setPage("admin");
+                setMenuOpen(false);
+              }}
+            >
+              <span className="nav-icon red">
+                ◇
+              </span>
+
+              <b>
+                ADMIN PANEL
+              </b>
+
+              <small>
+                AD
+              </small>
+            </button>
           )}
 
           <button
-            className="login-button"
-            disabled={loading}
+            className="nav-item"
+            onClick={handleLogout}
           >
-            {loading
-              ? "PROCESSING..."
-              : mode ===
-                "register"
-              ? "CREATE ACCOUNT"
-              : "LOGIN"}
+            <span className="nav-icon red">
+              ↪
+            </span>
+
+            <b>
+              LOGOUT
+            </b>
+
+            <small>
+              EX
+            </small>
           </button>
 
-        </form>
+        </nav>
 
-        <button
-          className="switch-auth"
-          onClick={() =>
-            setMode(
-              mode ===
-                "login"
-                ? "register"
-                : "login"
-            )
-          }
-        >
-          {mode ===
-          "login"
-            ? "Belum punya akun? Daftar"
-            : "Sudah punya akun? Login"}
-        </button>
+        <div className="side-footer">
+          <span>
+            SYSTEM STATUS
+          </span>
 
-      </div>
+          <strong>
+            ● OPERATIONAL
+          </strong>
+        </div>
+
+      </aside>
+
+      {/* =====================================================
+          MAIN
+      ===================================================== */}
+
+      <main className="main">
+
+        {/* ===================================================
+            DASHBOARD
+        =================================================== */}
+
+        {page === "dashboard" && (
+          <>
+            <section className="hero">
+
+              <div className="hero-robot-decoration">
+                <div className="robot-head">
+                  <div className="robot-eye left" />
+                  <div className="robot-eye right" />
+                  <div className="robot-mouth" />
+                </div>
+              </div>
+
+              <div className="hero-content">
+
+                <div className="terminal">
+                  <span className="terminal-light" />
+
+                  TERMINAL ACTIVE
+
+                  <span className="terminal-lines">
+                    /// SYSTEM READY
+                  </span>
+                </div>
+
+                <div className="hero-title">
+                  <h1>
+                    DASHBOARD
+                  </h1>
+
+                  <span>
+                    v1.0.0
+                  </span>
+                </div>
+
+                <p>
+                  Welcome back to DIN API.
+                  Manage your API access,
+                  requests, and developer
+                  tools from one place.
+                </p>
+
+                <div className="hero-system">
+
+                  <div className="system-item">
+                    <span>
+                      ROLE
+                    </span>
+
+                    <strong>
+                      {(
+                        profile?.role ||
+                        "MEMBER"
+                      ).toUpperCase()}
+                    </strong>
+                  </div>
+
+                  <div className="system-item active">
+                    <span>
+                      REQUESTS
+                    </span>
+
+                    <strong>
+                      {requestUsed}
+                    </strong>
+                  </div>
+
+                  <div className="system-item">
+                    <span>
+                      REMAINING
+                    </span>
+
+                    <strong>
+                      {remaining}
+                    </strong>
+                  </div>
+
+                </div>
+
+              </div>
+            </section>
+
+            {/* STATS */}
+
+            <section className="dashboard-grid">
+
+              <div className="dashboard-card">
+                <div className="dashboard-card-icon">
+                  🔑
+                </div>
+
+                <div>
+                  <small>
+                    API KEY
+                  </small>
+
+                  <strong>
+                    {apiKey
+                      ? "ACTIVE"
+                      : "NOT FOUND"}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="dashboard-card">
+                <div className="dashboard-card-icon">
+                  ⚡
+                </div>
+
+                <div>
+                  <small>
+                    DAILY LIMIT
+                  </small>
+
+                  <strong>
+                    {dailyLimit}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="dashboard-card">
+                <div className="dashboard-card-icon">
+                  ◉
+                </div>
+
+                <div>
+                  <small>
+                    STATUS
+                  </small>
+
+                  <strong>
+                    {(
+                      profile?.status ||
+                      "active"
+                    ).toUpperCase()}
+                  </strong>
+                </div>
+              </div>
+
+              <div className="dashboard-card">
+                <div className="dashboard-card-icon">
+                  ✦
+                </div>
+
+                <div>
+                  <small>
+                    ENDPOINTS
+                  </small>
+
+                  <strong>
+                    {totalEndpoints}
+                  </strong>
+                </div>
+              </div>
+
+            </section>
+
+            {/* USAGE */}
+
+            <section className="content-card">
+
+              <div className="section-title">
+                <div>
+                  <span className="eyebrow">
+                    SYSTEM
+                  </span>
+
+                  <h2>
+                    REQUEST USAGE
+                  </h2>
+                </div>
+
+                <span className="section-status">
+                  {requestUsed} / {dailyLimit}
+                </span>
+              </div>
+
+              <div className="usage-bar">
+                <div
+                  style={{
+                    width:
+                      `${usagePercent}%`,
+                  }}
+                />
+              </div>
+
+              <div className="usage-info">
+                <span>
+                  TODAY
+                </span>
+
+                <strong>
+                  {requestUsed} REQUEST
+                </strong>
+
+                <span>
+                  REMAINING
+                </span>
+
+                <strong>
+                  {remaining}
+                </strong>
+              </div>
+
+            </section>
+
+            {/* API KEY */}
+
+            <section className="key-card">
+
+              <div className="key-header">
+                <div>
+                  <span className="eyebrow">
+                    AUTHENTICATION
+                  </span>
+
+                  <h2>
+                    YOUR API KEY
+                  </h2>
+                </div>
+
+                <span className="key-status">
+                  ● ACTIVE
+                </span>
+              </div>
+
+              <div className="key-box">
+                <code>
+                  {apiKey?.api_key ||
+                    "API KEY BELUM TERSEDIA"}
+                </code>
+
+                <button
+                  onClick={copyApiKey}
+                  disabled={!apiKey}
+                >
+                  COPY
+                </button>
+              </div>
+
+              <p>
+                API key ini otomatis terhubung
+                dengan akun kamu dan digunakan
+                ketika mengakses endpoint DIN API.
+              </p>
+
+            </section>
+          </>
+        )}
+
+        {/* ===================================================
+            API KEY PAGE
+        =================================================== */}
+
+        {page === "apikey" && (
+          <section className="page-card">
+
+            <div className="page-heading">
+              <span className="eyebrow">
+                AUTHENTICATION
+              </span>
+
+              <h1>
+                API KEY
+              </h1>
+
+              <p>
+                Gunakan API key berikut untuk
+                mengakses layanan DIN API.
+              </p>
+            </div>
+
+            <div className="key-card">
+
+              <div className="key-header">
+                <div>
+                  <span className="eyebrow">
+                    DEFAULT KEY
+                  </span>
+
+                  <h2>
+                    DIN API KEY
+                  </h2>
+                </div>
+
+                <span className="key-status">
+                  {apiKey?.active
+                    ? "● ACTIVE"
+                    : "● INACTIVE"}
+                </span>
+              </div>
+
+              <div className="key-box">
+                <code>
+                  {apiKey?.api_key ||
+                    "API KEY BELUM TERSEDIA"}
+                </code>
+
+                <button
+                  onClick={copyApiKey}
+                  disabled={!apiKey}
+                >
+                  COPY
+                </button>
+              </div>
+
+            </div>
+
+          </section>
+        )}
+
+        {/* ===================================================
+            PROFILE
+        =================================================== */}
+
+        {page === "profile" && (
+          <section className="page-card">
+
+            <div className="page-heading">
+              <span className="eyebrow">
+                ACCOUNT
+              </span>
+
+              <h1>
+                PROFILE
+              </h1>
+
+              <p>
+                Informasi akun DIN API kamu.
+              </p>
+            </div>
+
+            <div className="profile-grid">
+
+              <div className="profile-item">
+                <small>
+                  EMAIL
+                </small>
+
+                <strong>
+                  {profile?.email ||
+                    session.user.email}
+                </strong>
+              </div>
+
+              <div className="profile-item">
+                <small>
+                  USER ID
+                </small>
+
+                <strong>
+                  {session.user.id}
+                </strong>
+              </div>
+
+              <div className="profile-item">
+                <small>
+                  ROLE
+                </small>
+
+                <strong>
+                  {(
+                    profile?.role ||
+                    "member"
+                  ).toUpperCase()}
+                </strong>
+              </div>
+
+              <div className="profile-item">
+                <small>
+                  STATUS
+                </small>
+
+                <strong>
+                  {(
+                    profile?.status ||
+                    "active"
+                  ).toUpperCase()}
+                </strong>
+              </div>
+
+              <div className="profile-item">
+                <small>
+                  DAILY LIMIT
+                </small>
+
+                <strong>
+                  {profile?.daily_limit ||
+                    0}
+                </strong>
+              </div>
+
+              <div className="profile-item">
+                <small>
+                  REQUESTS TODAY
+                </small>
+
+                <strong>
+                  {profile?.requests_today ||
+                    0}
+                </strong>
+              </div>
+
+            </div>
+
+          </section>
+        )}
+
+        {/* ===================================================
+            DOCS
+        =================================================== */}
+
+        {page === "docs" && (
+          <>
+            <section className="hero docs-hero">
+
+              <div className="hero-content">
+
+                <div className="terminal">
+                  <span className="terminal-light" />
+
+                  TERMINAL ACTIVE
+                </div>
+
+                <div className="hero-title">
+                  <h1>
+                    DOCS
+                  </h1>
+
+                  <span>
+                    v3.0.0
+                  </span>
+                </div>
+
+                <p>
+                  A comprehensive API
+                  documentation for modern
+                  applications.
+                </p>
+
+                <div className="hero-system">
+
+                  <div className="system-item">
+                    <span>
+                      CATEGORIES
+                    </span>
+
+                    <strong>
+                      {API_CATEGORIES.length}
+                    </strong>
+                  </div>
+
+                  <div className="system-item active">
+                    <span>
+                      ENDPOINTS
+                    </span>
+
+                    <strong>
+                      {totalEndpoints}
+                    </strong>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </section>
+
+            <div className="search-box">
+              <input
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+                placeholder="Search endpoint, category, or path..."
+              />
+            </div>
+
+            <section className="categories">
+
+              {filteredCategories.map(
+                (category) => {
+
+                  const categoryOpen =
+                    openCategory ===
+                    category.name;
+
+                  return (
+                    <div
+                      className={`category-card ${category.color}`}
+                      id={`category-${category.name.toLowerCase()}`}
+                      key={category.name}
+                    >
+
+                      <div
+                        className="category-header"
+                        onClick={() =>
+                          setOpenCategory(
+                            categoryOpen
+                              ? ""
+                              : category.name
+                          )
+                        }
+                      >
+
+                        <div className="category-icon">
+                          {category.icon}
+                        </div>
+
+                        <div className="category-info">
+
+                          <small>
+                            CATEGORY
+                          </small>
+
+                          <h2>
+                            {category.name}
+                          </h2>
+
+                          <span>
+                            {
+                              category.endpoints
+                                .length
+                            }{" "}
+                            ENDPOINTS
+                          </span>
+
+                        </div>
+
+                        <div className="category-action">
+
+                          <span>
+                            {categoryOpen
+                              ? "CLOSE"
+                              : "OPEN"}
+                          </span>
+
+                          <button
+                            type="button"
+                          >
+                            {categoryOpen
+                              ? "−"
+                              : "+"}
+                          </button>
+
+                        </div>
+
+                      </div>
+
+                      {categoryOpen && (
+                        <>
+                          <div className="category-path">
+                            /api/
+                            {category.name.toLowerCase()}
+                          </div>
+
+                          <div className="endpoint-list">
+
+                            {category.endpoints.map(
+                              (endpoint) => {
+
+                                const endpointKey =
+                                  `${category.name}:${endpoint.name}`;
+
+                                const isOpen =
+                                  openEndpoint ===
+                                  endpointKey;
+
+                                const response =
+                                  responses[
+                                    endpointKey
+                                  ];
+
+                                const isRequesting =
+                                  requestLoading[
+                                    endpointKey
+                                  ];
+
+                                return (
+                                  <div
+                                    className="endpoint-item"
+                                    key={
+                                      endpoint.name
+                                    }
+                                  >
+
+                                    <div
+                                      className="endpoint-row"
+                                      onClick={() =>
+                                        toggleEndpoint(
+                                          category.name,
+                                          endpoint
+                                        )
+                                      }
+                                    >
+
+                                      <span className="method-badge">
+                                        {
+                                          endpoint.method
+                                        }
+                                      </span>
+
+                                      <div className="endpoint-name">
+
+                                        <strong>
+                                          {
+                                            endpoint.name
+                                          }
+                                        </strong>
+
+                                        <small>
+                                          {
+                                            endpoint.path
+                                          }
+                                        </small>
+
+                                      </div>
+
+                                      <span className="endpoint-open">
+                                        {isOpen
+                                          ? "−"
+                                          : "+"}
+                                      </span>
+
+                                    </div>
+
+                                    {isOpen && (
+                                      <div className="endpoint-details">
+
+                                        <div className="endpoint-description">
+                                          {
+                                            endpoint.description
+                                          }
+                                        </div>
+
+                                        {endpoint.params.length >
+                                          0 && (
+                                          <>
+                                            <div className="params-title">
+                                              PARAMETERS
+                                            </div>
+
+                                            <div className="param-list">
+
+                                              {endpoint.params.map(
+                                                (param) => (
+                                                  <div
+                                                    className="param-item"
+                                                    key={
+                                                      param.name
+                                                    }
+                                                  >
+
+                                                    <div className="param-top">
+
+                                                      <span className="param-name">
+                                                        {
+                                                          param.name
+                                                        }
+                                                      </span>
+
+                                                      {param.required && (
+                                                        <span className="required">
+                                                          REQUIRED
+                                                        </span>
+                                                      )}
+
+                                                    </div>
+
+                                                    <input
+                                                      value={
+                                                        params[
+                                                          endpointKey
+                                                        ]?.[
+                                                          param.name
+                                                        ] || ""
+                                                      }
+                                                      onChange={(
+                                                        e
+                                                      ) =>
+                                                        updateParam(
+                                                          endpointKey,
+                                                          param.name,
+                                                          e.target.value
+                                                        )
+                                                      }
+                                                      placeholder={
+                                                        param.placeholder
+                                                      }
+                                                    />
+
+                                                  </div>
+                                                )
+                                              )}
+
+                                            </div>
+                                          </>
+                                        )}
+
+                                        <div className="execute-row">
+
+                                          <button
+                                            className="execute-button"
+                                            onClick={() =>
+                                              executeEndpoint(
+                                                category,
+                                                endpoint
+                                              )
+                                            }
+                                            disabled={
+                                              isRequesting
+                                            }
+                                          >
+                                            {isRequesting
+                                              ? "REQUESTING..."
+                                              : "EXECUTE"}
+                                          </button>
+
+                                          <span className="execute-method">
+                                            API KEY AUTOMATIC
+                                          </span>
+
+                                        </div>
+
+                                        {response && (
+                                          <div className="response-card">
+
+                                            <div className="response-header">
+
+                                              <span>
+                                                RESPONSE
+                                              </span>
+
+                                              <span className="response-status">
+                                                {response.success
+                                                  ? `HTTP ${
+                                                      response.http_status ||
+                                                      200
+                                                    }`
+                                                  : "ERROR"}
+                                              </span>
+
+                                            </div>
+
+                                            <pre className="response-body">
+                                              {JSON.stringify(
+                                                response,
+                                                null,
+                                                2
+                                              )}
+                                            </pre>
+
+                                          </div>
+                                        )}
+
+                                      </div>
+                                    )}
+
+                                  </div>
+                                );
+                              }
+                            )}
+
+                          </div>
+                        </>
+                      )}
+
+                    </div>
+                  );
+                }
+              )}
+
+            </section>
+          </>
+        )}
+
+        {/* ===================================================
+            ADMIN
+        =================================================== */}
+
+        {page === "admin" &&
+          profile?.role === "admin" && (
+            <section className="page-card">
+
+              <div className="page-heading">
+
+                <span className="eyebrow">
+                  CONTROL CENTER
+                </span>
+
+                <h1>
+                  ADMIN PANEL
+                </h1>
+
+                <p>
+                  Kelola member dan penggunaan
+                  API DIN API.
+                </p>
+
+              </div>
+
+              <div className="admin-toolbar">
+
+                <div>
+                  <strong>
+                    MEMBER DATABASE
+                  </strong>
+
+                  <small>
+                    {members.length} ACCOUNT
+                  </small>
+                </div>
+
+                <button
+                  className="refresh-button"
+                  onClick={loadMembers}
+                >
+                  ↻ REFRESH
+                </button>
+
+              </div>
+
+              {memberLoading ? (
+                <div className="admin-loading">
+                  LOADING MEMBERS...
+                </div>
+              ) : (
+                <div className="member-list">
+
+                  {members.map((member) => (
+                    <div
+                      className="member-card"
+                      key={member.id}
+                    >
+
+                      <div className="member-main">
+
+                        <div className="member-avatar">
+                          {(member.email ||
+                            "U")
+                            .charAt(0)
+                            .toUpperCase()}
+                        </div>
+
+                        <div>
+                          <strong>
+                            {member.email ||
+                              "Unknown"}
+                          </strong>
+
+                          <small>
+                            {member.id}
+                          </small>
+                        </div>
+
+                      </div>
+
+                      <div className="member-stats">
+
+                        <div>
+                          <small>
+                            ROLE
+                          </small>
+
+                          <strong>
+                            {(
+                              member.role ||
+                              "member"
+                            ).toUpperCase()}
+                          </strong>
+                        </div>
+
+                        <div>
+                          <small>
+                            REQUEST
+                          </small>
+
+                          <strong>
+                            {
+                              member.requests_today
+                            }{" "}
+                            /{" "}
+                            {
+                              member.daily_limit
+                            }
+                          </strong>
+                        </div>
+
+                        <div>
+                          <small>
+                            STATUS
+                          </small>
+
+                          <strong>
+                            {(
+                              member.status ||
+                              "active"
+                            ).toUpperCase()}
+                          </strong>
+                        </div>
+
+                      </div>
+
+                      <div className="member-actions">
+
+                        <label>
+                          LIMIT
+
+                          <input
+                            type="number"
+                            min="0"
+                            defaultValue={
+                              member.daily_limit
+                            }
+                            onBlur={(e) =>
+                              changeMemberLimit(
+                                member.id,
+                                e.target.value
+                              )
+                            }
+                          />
+                        </label>
+
+                        <button
+                          onClick={() =>
+                            resetMemberRequests(
+                              member.id
+                            )
+                          }
+                        >
+                          RESET
+                        </button>
+
+                        <button
+                          onClick={() =>
+                            changeMemberStatus(
+                              member.id,
+                              member.status ===
+                                "active"
+                                ? "suspended"
+                                : "active"
+                            )
+                          }
+                        >
+                          {member.status ===
+                          "active"
+                            ? "SUSPEND"
+                            : "ACTIVE"}
+                        </button>
+
+                      </div>
+
+                    </div>
+                  ))}
+
+                  {members.length === 0 && (
+                    <div className="empty-state">
+                      BELUM ADA MEMBER.
+                    </div>
+                  )}
+
+                </div>
+              )}
+
+            </section>
+          )}
+
+      </main>
+
+      {/* =====================================================
+          FOOTER
+      ===================================================== */}
+
+      <footer className="footer">
+        DIN API • ROBOT SYSTEM • SECURE API PLATFORM
+      </footer>
 
     </div>
   );
