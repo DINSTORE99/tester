@@ -3,15 +3,15 @@ import { createClient } from "@supabase/supabase-js";
 import "./style.css";
 
 /* =========================================================
-   SUPABASE CONFIG
+   SUPABASE
 ========================================================= */
 
 const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 const supabase =
-  SUPABASE_URL && SUPABASE_ANON_KEY
-    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+  SUPABASE_URL && SUPABASE_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_KEY)
     : null;
 
 /* =========================================================
@@ -22,104 +22,172 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  const [page, setPage] = useState("login");
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  /* -------------------------------------------------------
+     CEK SESSION
+  ------------------------------------------------------- */
+
   useEffect(() => {
     if (!supabase) {
       setLoading(false);
       return;
     }
 
-    supabase.auth.getSession().then(({ data }) => {
-      setSession(data.session);
+    let mounted = true;
+
+    const getSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (error) {
+        setError(error.message);
+      }
+
+      setSession(data?.session || null);
       setLoading(false);
-    });
+    };
+
+    getSession();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, newSession) => {
-      setSession(newSession);
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (!mounted) return;
+
+      setSession(currentSession);
+
+      if (event === "SIGNED_IN") {
+        setPage("dashboard");
+        setMessage("");
+        setError("");
+      }
+
+      if (event === "SIGNED_OUT") {
+        setPage("login");
+      }
+
+      if (event === "PASSWORD_RECOVERY") {
+        setPage("reset");
+        setMessage("");
+        setError("");
+      }
     });
 
     return () => {
+      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
 
-  /* =======================================================
-     ENV ERROR
-  ======================================================= */
+  /* -------------------------------------------------------
+     SUPABASE BELUM DIKONFIGURASI
+  ------------------------------------------------------- */
 
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    return <EnvError />;
-  }
-
-  /* =======================================================
-     LOADING
-  ======================================================= */
-
-  if (loading) {
+  if (!supabase) {
     return (
-      <div className="app-loading">
-        <div className="loading-logo">D</div>
-        <div className="loading-text">DINSTORE API</div>
-        <div className="loading-spinner"></div>
+      <div className="app">
+        <div className="grid-bg" />
+
+        <main className="center">
+          <div className="card">
+            <div className="logo">D</div>
+
+            <h1>Supabase belum dikonfigurasi</h1>
+
+            <p>
+              Tambahkan environment variable berikut ke
+              <b> .env.local</b>:
+            </p>
+
+            <div className="env-box">
+              <code>VITE_SUPABASE_URL</code>
+              <code>VITE_SUPABASE_ANON_KEY</code>
+            </div>
+
+            <p className="small">
+              Setelah mengubah .env.local, restart server Vite.
+            </p>
+          </div>
+        </main>
       </div>
     );
   }
 
-  /* =======================================================
-     AUTH
-  ======================================================= */
+  /* -------------------------------------------------------
+     LOADING
+  ------------------------------------------------------- */
 
-  if (!session) {
-    return <AuthPage />;
+  if (loading) {
+    return (
+      <div className="app">
+        <div className="grid-bg" />
+
+        <main className="center">
+          <div className="loader-card">
+            <div className="spinner" />
+            <p>Memuat...</p>
+          </div>
+        </main>
+      </div>
+    );
   }
 
-  /* =======================================================
+  /* -------------------------------------------------------
      DASHBOARD
-  ======================================================= */
+  ------------------------------------------------------- */
 
-  return <Dashboard session={session} />;
-}
+  if (session && page === "dashboard") {
+    return (
+      <Dashboard
+        session={session}
+        onLogout={async () => {
+          await supabase.auth.signOut();
+          setSession(null);
+          setPage("login");
+        }}
+      />
+    );
+  }
 
-/* =========================================================
-   ENV ERROR
-========================================================= */
+  /* -------------------------------------------------------
+     RESET PASSWORD
+  ------------------------------------------------------- */
 
-function EnvError() {
+  if (page === "reset") {
+    return (
+      <ResetPassword
+        supabase={supabase}
+        message={message}
+        error={error}
+        setMessage={setMessage}
+        setError={setError}
+        onBack={() => {
+          setPage("login");
+          setMessage("");
+          setError("");
+        }}
+      />
+    );
+  }
+
+  /* -------------------------------------------------------
+     AUTH
+  ------------------------------------------------------- */
+
   return (
-    <div className="app">
-      <div className="background-grid"></div>
-
-      <div className="error-container">
-        <div className="error-card">
-          <div className="brand">
-            <div className="brand-logo">D</div>
-            <div>
-              <strong>DINSTORE</strong>
-              <span>API</span>
-            </div>
-          </div>
-
-          <div className="error-icon">!</div>
-
-          <h1>Supabase belum dikonfigurasi</h1>
-
-          <p>
-            Tambahkan dua Environment Variable berikut di project Vercel:
-          </p>
-
-          <div className="env-box">
-            <div>VITE_SUPABASE_URL</div>
-            <div>VITE_SUPABASE_ANON_KEY</div>
-          </div>
-
-          <p className="small">
-            Setelah menambahkan Environment Variable, lakukan redeploy
-            project di Vercel.
-          </p>
-        </div>
-      </div>
-    </div>
+    <AuthPage
+      supabase={supabase}
+      page={page}
+      setPage={setPage}
+      message={message}
+      error={error}
+      setMessage={setMessage}
+      setError={setError}
+    />
   );
 }
 
@@ -127,26 +195,34 @@ function EnvError() {
    AUTH PAGE
 ========================================================= */
 
-function AuthPage() {
-  const [mode, setMode] = useState("login");
-
-  const [name, setName] = useState("");
+function AuthPage({
+  supabase,
+  page,
+  setPage,
+  message,
+  error,
+  setMessage,
+  setError,
+}) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [name, setName] = useState("");
 
   const [loading, setLoading] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
 
-  function resetMessages() {
+  const clearMessages = () => {
     setMessage("");
     setError("");
-  }
+  };
 
-  async function handleLogin(e) {
+  /* -------------------------------------------------------
+     LOGIN
+  ------------------------------------------------------- */
+
+  const login = async (e) => {
     e.preventDefault();
 
-    resetMessages();
+    clearMessages();
 
     if (!email || !password) {
       setError("Email dan password wajib diisi.");
@@ -156,25 +232,36 @@ function AuthPage() {
     setLoading(true);
 
     const { error } = await supabase.auth.signInWithPassword({
-      email,
+      email: email.trim(),
       password,
     });
 
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      setError(getAuthError(error));
       return;
     }
-  }
 
-  async function handleRegister(e) {
+    setMessage("Login berhasil.");
+  };
+
+  /* -------------------------------------------------------
+     REGISTER
+  ------------------------------------------------------- */
+
+  const register = async (e) => {
     e.preventDefault();
 
-    resetMessages();
+    clearMessages();
 
-    if (!name || !email || !password) {
-      setError("Nama, email dan password wajib diisi.");
+    if (!name.trim()) {
+      setError("Nama wajib diisi.");
+      return;
+    }
+
+    if (!email || !password) {
+      setError("Email dan password wajib diisi.");
       return;
     }
 
@@ -186,11 +273,11 @@ function AuthPage() {
     setLoading(true);
 
     const { data, error } = await supabase.auth.signUp({
-      email,
+      email: email.trim(),
       password,
       options: {
         data: {
-          name,
+          full_name: name.trim(),
         },
       },
     });
@@ -198,21 +285,33 @@ function AuthPage() {
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      setError(getAuthError(error));
       return;
     }
 
-    if (data.session) {
-      return;
+    /*
+      Jika Supabase Email Confirmation dimatikan,
+      session langsung tersedia.
+
+      Jika masih aktif, user akan mendapatkan email
+      konfirmasi dari Supabase.
+    */
+
+    if (data?.session) {
+      setMessage("Akun berhasil dibuat.");
+    } else {
+      setMessage(
+        "Akun berhasil dibuat. Silakan cek email jika konfirmasi email aktif."
+      );
     }
+  };
 
-    setMessage(
-      "Akun berhasil dibuat. Jika konfirmasi email aktif di Supabase, silakan cek email kamu."
-    );
-  }
+  /* -------------------------------------------------------
+     GOOGLE LOGIN
+  ------------------------------------------------------- */
 
-  async function handleGoogleLogin() {
-    resetMessages();
+  const loginGoogle = async () => {
+    clearMessages();
     setLoading(true);
 
     const redirectTo = window.location.origin;
@@ -226,14 +325,18 @@ function AuthPage() {
 
     if (error) {
       setLoading(false);
-      setError(error.message);
+      setError(getAuthError(error));
     }
-  }
+  };
 
-  async function handleForgotPassword(e) {
+  /* -------------------------------------------------------
+     FORGOT PASSWORD
+  ------------------------------------------------------- */
+
+  const forgotPassword = async (e) => {
     e.preventDefault();
 
-    resetMessages();
+    clearMessages();
 
     if (!email) {
       setError("Masukkan email terlebih dahulu.");
@@ -242,202 +345,47 @@ function AuthPage() {
 
     setLoading(true);
 
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
-    });
+    const redirectTo = `${window.location.origin}`;
+
+    const { error } = await supabase.auth.resetPasswordForEmail(
+      email.trim(),
+      {
+        redirectTo,
+      }
+    );
 
     setLoading(false);
 
     if (error) {
-      setError(error.message);
+      setError(getAuthError(error));
       return;
     }
 
-    setMessage("Link reset password sudah dikirim ke email kamu.");
-  }
+    setMessage(
+      "Link reset password sudah dikirim. Cek inbox email kamu."
+    );
+  };
 
-  /* =======================================================
-     LOGIN
-  ======================================================= */
+  /* -------------------------------------------------------
+     LOGIN PAGE
+  ------------------------------------------------------- */
 
-  if (mode === "login") {
+  if (page === "login") {
     return (
       <AuthLayout>
-        <div className="auth-card">
-          <Brand />
-
-          <div className="auth-header">
-            <span className="eyebrow">MEMBER ACCESS</span>
-            <h1>LOGIN</h1>
-            <p>Masuk ke akun DINSTORE API kamu.</p>
-          </div>
-
-          {error && <Alert type="error">{error}</Alert>}
-          {message && <Alert type="success">{message}</Alert>}
-
-          <form onSubmit={handleLogin}>
-            <label>Email</label>
-
-            <input
-              type="email"
-              placeholder="nama@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-
-            <label>Password</label>
-
-            <input
-              type="password"
-              placeholder="Password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="current-password"
-            />
-
-            <button className="primary-btn" disabled={loading}>
-              {loading ? "MEMPROSES..." : "LOGIN"}
-            </button>
-          </form>
-
-          <button
-            className="google-btn"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-          >
-            <GoogleIcon />
-            <span>Login dengan Google</span>
-          </button>
-
-          <div className="auth-links">
-            <button
-              onClick={() => {
-                resetMessages();
-                setMode("forgot");
-              }}
-            >
-              Lupa password?
-            </button>
-          </div>
-
-          <div className="auth-bottom">
-            Belum punya akun?
-
-            <button
-              onClick={() => {
-                resetMessages();
-                setMode("register");
-              }}
-            >
-              Daftar sekarang
-            </button>
-          </div>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  /* =======================================================
-     REGISTER
-  ======================================================= */
-
-  if (mode === "register") {
-    return (
-      <AuthLayout>
-        <div className="auth-card">
-          <Brand />
-
-          <div className="auth-header">
-            <span className="eyebrow">MEMBER ACCESS</span>
-            <h1>DAFTAR MEMBER</h1>
-            <p>Buat akun baru dan dapatkan akses API.</p>
-          </div>
-
-          {error && <Alert type="error">{error}</Alert>}
-          {message && <Alert type="success">{message}</Alert>}
-
-          <form onSubmit={handleRegister}>
-            <label>Nama</label>
-
-            <input
-              type="text"
-              placeholder="Nama kamu"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              autoComplete="name"
-            />
-
-            <label>Email</label>
-
-            <input
-              type="email"
-              placeholder="nama@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              autoComplete="email"
-            />
-
-            <label>Password</label>
-
-            <input
-              type="password"
-              placeholder="Minimal 6 karakter"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              autoComplete="new-password"
-            />
-
-            <button className="primary-btn" disabled={loading}>
-              {loading ? "MEMPROSES..." : "CREATE ACCOUNT"}
-            </button>
-          </form>
-
-          <button
-            className="google-btn"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-          >
-            <GoogleIcon />
-            <span>Daftar dengan Google</span>
-          </button>
-
-          <div className="auth-bottom">
-            Sudah punya akun?
-
-            <button
-              onClick={() => {
-                resetMessages();
-                setMode("login");
-              }}
-            >
-              Login
-            </button>
-          </div>
-        </div>
-      </AuthLayout>
-    );
-  }
-
-  /* =======================================================
-     FORGOT PASSWORD
-  ======================================================= */
-
-  return (
-    <AuthLayout>
-      <div className="auth-card">
-        <Brand />
-
         <div className="auth-header">
-          <span className="eyebrow">ACCOUNT RECOVERY</span>
-          <h1>LUPA PASSWORD</h1>
-          <p>Masukkan email untuk mendapatkan link reset password.</p>
+          <div className="logo">D</div>
+
+          <h1>Selamat datang</h1>
+
+          <p>Login ke DINSTORE</p>
         </div>
 
-        {error && <Alert type="error">{error}</Alert>}
-        {message && <Alert type="success">{message}</Alert>}
+        {message && <div className="success">{message}</div>}
 
-        <form onSubmit={handleForgotPassword}>
+        {error && <div className="error">{error}</div>}
+
+        <form onSubmit={login} className="form">
           <label>Email</label>
 
           <input
@@ -448,24 +396,302 @@ function AuthPage() {
             autoComplete="email"
           />
 
-          <button className="primary-btn" disabled={loading}>
-            {loading ? "MENGIRIM..." : "KIRIM LINK RESET"}
+          <label>Password</label>
+
+          <input
+            type="password"
+            placeholder="Masukkan password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+
+          <button
+            type="submit"
+            className="primary-btn"
+            disabled={loading}
+          >
+            {loading ? "Memproses..." : "Login"}
           </button>
         </form>
 
-        <div className="auth-bottom">
-          Ingat password?
+        <button
+          className="forgot-btn"
+          onClick={() => {
+            clearMessages();
+            setPage("forgot");
+          }}
+        >
+          Lupa password?
+        </button>
 
+        <div className="divider">
+          <span>atau</span>
+        </div>
+
+        <button
+          className="google-btn"
+          onClick={loginGoogle}
+          disabled={loading}
+        >
+          <GoogleIcon />
+
+          <span>Login dengan Google</span>
+        </button>
+
+        <div className="bottom-text">
+          Belum punya akun?{" "}
           <button
             onClick={() => {
-              resetMessages();
-              setMode("login");
+              clearMessages();
+              setPage("register");
             }}
           >
-            Kembali Login
+            Daftar
           </button>
         </div>
+      </AuthLayout>
+    );
+  }
+
+  /* -------------------------------------------------------
+     REGISTER PAGE
+  ------------------------------------------------------- */
+
+  if (page === "register") {
+    return (
+      <AuthLayout>
+        <div className="auth-header">
+          <div className="logo">D</div>
+
+          <h1>Buat akun</h1>
+
+          <p>Daftar akun DINSTORE baru</p>
+        </div>
+
+        {message && <div className="success">{message}</div>}
+
+        {error && <div className="error">{error}</div>}
+
+        <form onSubmit={register} className="form">
+          <label>Nama</label>
+
+          <input
+            type="text"
+            placeholder="Nama kamu"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            autoComplete="name"
+          />
+
+          <label>Email</label>
+
+          <input
+            type="email"
+            placeholder="nama@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+
+          <label>Password</label>
+
+          <input
+            type="password"
+            placeholder="Minimal 6 karakter"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+
+          <button
+            type="submit"
+            className="primary-btn"
+            disabled={loading}
+          >
+            {loading ? "Membuat akun..." : "Daftar"}
+          </button>
+        </form>
+
+        <div className="divider">
+          <span>atau</span>
+        </div>
+
+        <button
+          className="google-btn"
+          onClick={loginGoogle}
+          disabled={loading}
+        >
+          <GoogleIcon />
+
+          <span>Daftar dengan Google</span>
+        </button>
+
+        <div className="bottom-text">
+          Sudah punya akun?{" "}
+          <button
+            onClick={() => {
+              clearMessages();
+              setPage("login");
+            }}
+          >
+            Login
+          </button>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  /* -------------------------------------------------------
+     FORGOT PAGE
+  ------------------------------------------------------- */
+
+  if (page === "forgot") {
+    return (
+      <AuthLayout>
+        <div className="auth-header">
+          <div className="logo">D</div>
+
+          <h1>Lupa password?</h1>
+
+          <p>Masukkan email untuk mendapatkan link reset.</p>
+        </div>
+
+        {message && <div className="success">{message}</div>}
+
+        {error && <div className="error">{error}</div>}
+
+        <form onSubmit={forgotPassword} className="form">
+          <label>Email</label>
+
+          <input
+            type="email"
+            placeholder="nama@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+
+          <button
+            type="submit"
+            className="primary-btn"
+            disabled={loading}
+          >
+            {loading ? "Mengirim..." : "Kirim Link Reset"}
+          </button>
+        </form>
+
+        <button
+          className="back-btn"
+          onClick={() => {
+            clearMessages();
+            setPage("login");
+          }}
+        >
+          ← Kembali ke Login
+        </button>
+      </AuthLayout>
+    );
+  }
+
+  return null;
+}
+
+/* =========================================================
+   RESET PASSWORD
+========================================================= */
+
+function ResetPassword({
+  supabase,
+  message,
+  error,
+  setMessage,
+  setError,
+  onBack,
+}) {
+  const [password, setPassword] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const updatePassword = async (e) => {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    if (password.length < 6) {
+      setError("Password minimal 6 karakter.");
+      return;
+    }
+
+    if (password !== confirm) {
+      setError("Konfirmasi password tidak sama.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.updateUser({
+      password,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setError(getAuthError(error));
+      return;
+    }
+
+    setMessage("Password berhasil diubah.");
+
+    setTimeout(() => {
+      onBack();
+    }, 1500);
+  };
+
+  return (
+    <AuthLayout>
+      <div className="auth-header">
+        <div className="logo">D</div>
+
+        <h1>Password baru</h1>
+
+        <p>Buat password baru untuk akun kamu.</p>
       </div>
+
+      {message && <div className="success">{message}</div>}
+
+      {error && <div className="error">{error}</div>}
+
+      <form onSubmit={updatePassword} className="form">
+        <label>Password baru</label>
+
+        <input
+          type="password"
+          placeholder="Minimal 6 karakter"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          autoComplete="new-password"
+        />
+
+        <label>Konfirmasi password</label>
+
+        <input
+          type="password"
+          placeholder="Ulangi password"
+          value={confirm}
+          onChange={(e) => setConfirm(e.target.value)}
+          autoComplete="new-password"
+        />
+
+        <button
+          type="submit"
+          className="primary-btn"
+          disabled={loading}
+        >
+          {loading ? "Menyimpan..." : "Simpan Password"}
+        </button>
+      </form>
     </AuthLayout>
   );
 }
@@ -477,20 +703,18 @@ function AuthPage() {
 function AuthLayout({ children }) {
   return (
     <div className="app">
-      <div className="background-grid"></div>
+      <div className="grid-bg" />
 
-      <header className="topbar">
-        <Brand />
+      <div className="glow glow-one" />
+      <div className="glow glow-two" />
 
-        <div className="topbar-status">
-          <span className="status-dot"></span>
-          SYSTEM ONLINE
-        </div>
-      </header>
+      <main className="auth-container">
+        <div className="auth-card">{children}</div>
 
-      <main className="auth-main">{children}</main>
-
-      <div className="floating-orb">D</div>
+        <p className="copyright">
+          © {new Date().getFullYear()} DINSTORE
+        </p>
+      </main>
     </div>
   );
 }
@@ -499,328 +723,75 @@ function AuthLayout({ children }) {
    DASHBOARD
 ========================================================= */
 
-function Dashboard({ session }) {
-  const [active, setActive] = useState("home");
-  const [loggingOut, setLoggingOut] = useState(false);
-
+function Dashboard({ session, onLogout }) {
   const user = session?.user;
 
-  const displayName =
-    user?.user_metadata?.name ||
+  const name =
     user?.user_metadata?.full_name ||
+    user?.user_metadata?.name ||
     user?.email?.split("@")[0] ||
-    "Member";
-
-  async function logout() {
-    setLoggingOut(true);
-
-    await supabase.auth.signOut();
-
-    setLoggingOut(false);
-  }
+    "User";
 
   return (
-    <div className="dashboard">
-      <div className="background-grid"></div>
+    <div className="app">
+      <div className="grid-bg" />
 
-      <header className="dashboard-topbar">
-        <Brand />
+      <div className="glow glow-one" />
+      <div className="glow glow-two" />
 
-        <div className="dashboard-user">
-          <div className="user-info">
-            <strong>{displayName}</strong>
-            <span>{user?.email}</span>
+      <main className="dashboard">
+        <header className="topbar">
+          <div className="brand">
+            <div className="brand-logo">D</div>
+
+            <div>
+              <strong>DINSTORE</strong>
+              <small>API Dashboard</small>
+            </div>
           </div>
 
-          <button onClick={logout} disabled={loggingOut}>
-            {loggingOut ? "..." : "LOGOUT"}
+          <button className="logout-btn" onClick={onLogout}>
+            Logout
           </button>
-        </div>
-      </header>
+        </header>
 
-      <div className="dashboard-layout">
-        <aside className="sidebar">
-          <nav>
-            <SidebarButton
-              icon="⌂"
-              label="HOME"
-              active={active === "home"}
-              onClick={() => setActive("home")}
-            />
-
-            <SidebarButton
-              icon="✦"
-              label="AI"
-              active={active === "ai"}
-              onClick={() => setActive("ai")}
-            />
-
-            <SidebarButton
-              icon="◈"
-              label="ADMIN"
-              active={active === "admin"}
-              onClick={() => setActive("admin")}
-            />
-
-            <SidebarButton
-              icon="▤"
-              label="CACHE"
-              active={active === "cache"}
-              onClick={() => setActive("cache")}
-            />
-
-            <SidebarButton
-              icon="↓"
-              label="DOWNLOAD"
-              active={active === "download"}
-              onClick={() => setActive("download")}
-            />
-
-            <SidebarButton
-              icon="⚒"
-              label="TOOLS"
-              active={active === "tools"}
-              onClick={() => setActive("tools")}
-            />
-
-            <SidebarButton
-              icon="♙"
-              label="MEMBER"
-              active={active === "member"}
-              onClick={() => setActive("member")}
-            />
-          </nav>
-        </aside>
-
-        <main className="dashboard-main">
-          {active === "home" && (
-            <HomeContent user={user} displayName={displayName} />
-          )}
-
-          {active === "ai" && <SimplePage title="AI" />}
-          {active === "admin" && <SimplePage title="ADMIN" />}
-          {active === "cache" && <SimplePage title="CACHE" />}
-          {active === "download" && <SimplePage title="DOWNLOAD" />}
-          {active === "tools" && <SimplePage title="TOOLS" />}
-          {active === "member" && (
-            <MemberPage user={user} displayName={displayName} />
-          )}
-        </main>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   HOME CONTENT
-========================================================= */
-
-function HomeContent({ user, displayName }) {
-  return (
-    <section className="content-wrapper">
-      <div className="hero-card">
-        <div className="hero-content">
-          <span className="eyebrow">WELCOME MEMBER</span>
-
-          <h1>
-            HALO, <span>{displayName.toUpperCase()}</span>
-          </h1>
-
-          <p>
-            Selamat datang di dashboard DINSTORE API.
-            Semua layanan API tersedia dari sini.
-          </p>
-
-          <div className="hero-buttons">
-            <button>EXPLORE API</button>
-            <button className="secondary-btn">DOCUMENTATION</button>
-          </div>
-        </div>
-
-        <div className="hero-orb-large">
-          <span>D</span>
-        </div>
-      </div>
-
-      <div className="stats-grid">
-        <StatCard
-          title="ACCOUNT"
-          value="ACTIVE"
-          description="Akun kamu aktif"
-        />
-
-        <StatCard
-          title="AUTH"
-          value="SECURE"
-          description="Supabase Authentication"
-        />
-
-        <StatCard
-          title="API"
-          value="ONLINE"
-          description="DINSTORE API"
-        />
-      </div>
-
-      <div className="content-card">
-        <div className="section-heading">
-          <div>
-            <span className="eyebrow">SYSTEM</span>
-            <h2>System Information</h2>
+        <section className="welcome-card">
+          <div className="avatar">
+            {name.charAt(0).toUpperCase()}
           </div>
 
-          <span className="online-badge">
-            <span></span>
-            ONLINE
-          </span>
-        </div>
-
-        <div className="system-list">
           <div>
-            <span>EMAIL</span>
+            <span className="eyebrow">WELCOME</span>
+
+            <h1>Halo, {name} 👋</h1>
+
+            <p>
+              Kamu berhasil login ke DINSTORE.
+            </p>
+          </div>
+        </section>
+
+        <section className="info-grid">
+          <div className="info-card">
+            <span>Status</span>
+            <strong className="online">
+              ● Online
+            </strong>
+          </div>
+
+          <div className="info-card">
+            <span>Email</span>
             <strong>{user?.email || "-"}</strong>
           </div>
 
-          <div>
-            <span>USER ID</span>
-            <strong className="mono">{user?.id || "-"}</strong>
-          </div>
-
-          <div>
-            <span>AUTH PROVIDER</span>
+          <div className="info-card">
+            <span>Provider</span>
             <strong>
               {user?.app_metadata?.provider || "email"}
             </strong>
           </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* =========================================================
-   MEMBER PAGE
-========================================================= */
-
-function MemberPage({ user, displayName }) {
-  return (
-    <section className="content-wrapper">
-      <div className="page-title">
-        <span className="eyebrow">MEMBER</span>
-        <h1>PROFILE</h1>
-        <p>Informasi akun kamu.</p>
-      </div>
-
-      <div className="content-card">
-        <div className="profile-row">
-          <div className="profile-avatar">
-            {displayName.charAt(0).toUpperCase()}
-          </div>
-
-          <div>
-            <h2>{displayName}</h2>
-            <p>{user?.email}</p>
-          </div>
-        </div>
-
-        <div className="system-list">
-          <div>
-            <span>EMAIL</span>
-            <strong>{user?.email}</strong>
-          </div>
-
-          <div>
-            <span>USER ID</span>
-            <strong className="mono">{user?.id}</strong>
-          </div>
-
-          <div>
-            <span>STATUS</span>
-            <strong className="green">ACTIVE</strong>
-          </div>
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* =========================================================
-   SIMPLE PAGE
-========================================================= */
-
-function SimplePage({ title }) {
-  return (
-    <section className="content-wrapper">
-      <div className="page-title">
-        <span className="eyebrow">DINSTORE API</span>
-        <h1>{title}</h1>
-        <p>Menu {title} sedang disiapkan.</p>
-      </div>
-
-      <div className="content-card empty-card">
-        <div className="empty-icon">✦</div>
-        <h2>{title}</h2>
-        <p>Fitur akan tersedia di update berikutnya.</p>
-      </div>
-    </section>
-  );
-}
-
-/* =========================================================
-   SIDEBAR BUTTON
-========================================================= */
-
-function SidebarButton({ icon, label, active, onClick }) {
-  return (
-    <button
-      className={`sidebar-button ${active ? "active" : ""}`}
-      onClick={onClick}
-    >
-      <span className="sidebar-icon">{icon}</span>
-      <span>{label}</span>
-    </button>
-  );
-}
-
-/* =========================================================
-   STAT CARD
-========================================================= */
-
-function StatCard({ title, value, description }) {
-  return (
-    <div className="stat-card">
-      <span>{title}</span>
-      <strong>{value}</strong>
-      <small>{description}</small>
-    </div>
-  );
-}
-
-/* =========================================================
-   BRAND
-========================================================= */
-
-function Brand() {
-  return (
-    <div className="brand">
-      <div className="brand-logo">D</div>
-
-      <div className="brand-name">
-        <strong>DINSTORE</strong>
-        <span>API</span>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   ALERT
-========================================================= */
-
-function Alert({ type, children }) {
-  return (
-    <div className={`alert ${type}`}>
-      {children}
+        </section>
+      </main>
     </div>
   );
 }
@@ -839,23 +810,61 @@ function GoogleIcon() {
     >
       <path
         fill="#4285F4"
-        d="M21.35 12.27c0-.68-.06-1.34-.18-1.97H12v3.73h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.15Z"
+        d="M21.35 12.23c0-.79-.07-1.55-.22-2.27H12v4.3h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.42z"
       />
 
       <path
         fill="#34A853"
-        d="M12 21.99c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.28v2.53A9.74 9.74 0 0 0 12 21.99Z"
+        d="M12 21.7c2.63 0 4.84-.87 6.45-2.35l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.28v2.53A9.74 9.74 0 0 0 12 21.7z"
       />
 
       <path
         fill="#FBBC05"
-        d="M6.53 14.07a5.86 5.86 0 0 1 0-3.75V7.79H3.28a9.99 9.99 0 0 0 0 8.81l3.25-2.53Z"
+        d="M6.53 13.79a5.86 5.86 0 0 1 0-3.58V7.68H3.28a9.73 9.73 0 0 0 0 8.64l3.25-2.53z"
       />
 
       <path
         fill="#EA4335"
-        d="M12 6.29c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.38 14.63 2.01 12 2.01a9.74 9.74 0 0 0-8.72 5.78l3.25 2.53C7.3 8.01 9.46 6.29 12 6.29Z"
+        d="M12 6.18c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.83 3.3 14.63 2.3 12 2.3a9.74 9.74 0 0 0-8.72 5.38l3.25 2.53C7.3 7.9 9.46 6.18 12 6.18z"
       />
     </svg>
   );
+}
+
+/* =========================================================
+   AUTH ERROR
+========================================================= */
+
+function getAuthError(error) {
+  if (!error?.message) {
+    return "Terjadi kesalahan. Silakan coba lagi.";
+  }
+
+  const message = error.message.toLowerCase();
+
+  if (message.includes("invalid login credentials")) {
+    return "Email atau password salah.";
+  }
+
+  if (message.includes("email not confirmed")) {
+    return "Email belum dikonfirmasi.";
+  }
+
+  if (message.includes("user already registered")) {
+    return "Email tersebut sudah terdaftar.";
+  }
+
+  if (message.includes("password should be at least")) {
+    return "Password terlalu pendek.";
+  }
+
+  if (message.includes("provider is not enabled")) {
+    return "Login Google belum diaktifkan di Supabase.";
+  }
+
+  if (message.includes("redirect")) {
+    return "Redirect URL belum diizinkan di Supabase.";
+  }
+
+  return error.message;
 }
