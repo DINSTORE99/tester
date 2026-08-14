@@ -1,47 +1,63 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "./lib/supabase";
+import "./style.css";
 
 export default function App() {
   const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [loading, setLoading] = useState(true);
 
   const [page, setPage] = useState("login");
+  const [adminPage, setAdminPage] = useState("overview");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
 
   const [showPassword, setShowPassword] = useState(false);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
   const [processing, setProcessing] = useState(false);
 
-  // =========================
-  // CHECK SESSION
-  // =========================
+  const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+
+  const [members, setMembers] = useState([]);
+  const [search, setSearch] = useState("");
+
+  /* =========================
+     SESSION
+  ========================= */
 
   useEffect(() => {
     let mounted = true;
 
-    async function getSession() {
-      const { data, error } = await supabase.auth.getSession();
+    async function loadSession() {
+      const { data } = await supabase.auth.getSession();
 
       if (!mounted) return;
 
-      if (error) {
-        console.error(error);
+      if (data?.session) {
+        setSession(data.session);
+        await loadProfile(data.session.user);
       }
 
-      setSession(data?.session || null);
       setLoading(false);
     }
 
-    getSession();
+    loadSession();
 
     const {
       data: { subscription },
     } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
+      async (_event, newSession) => {
+        if (!mounted) return;
+
         setSession(newSession || null);
+
+        if (newSession) {
+          await loadProfile(newSession.user);
+        } else {
+          setProfile(null);
+        }
       }
     );
 
@@ -51,23 +67,44 @@ export default function App() {
     };
   }, []);
 
-  // =========================
-  // RESET FORM
-  // =========================
+  /* =========================
+     LOAD PROFILE
+  ========================= */
 
-  function resetMessage() {
-    setMessage("");
-    setError("");
+  async function loadProfile(user) {
+    if (!user) return;
+
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle();
+
+    if (error) {
+      console.error("Profile error:", error);
+      return;
+    }
+
+    setProfile(data || null);
   }
 
-  // =========================
-  // LOGIN
-  // =========================
+  /* =========================
+     MESSAGE
+  ========================= */
+
+  function clearMessage() {
+    setError("");
+    setMessage("");
+  }
+
+  /* =========================
+     LOGIN
+  ========================= */
 
   async function handleLogin(e) {
     e.preventDefault();
 
-    resetMessage();
+    clearMessage();
 
     if (!email || !password) {
       setError("Email dan password wajib diisi.");
@@ -78,7 +115,7 @@ export default function App() {
 
     const { data, error } =
       await supabase.auth.signInWithPassword({
-        email,
+        email: email.trim(),
         password,
       });
 
@@ -89,22 +126,23 @@ export default function App() {
       return;
     }
 
-    setSession(data.session);
-
-    setMessage("Login berhasil.");
+    if (data?.session) {
+      setSession(data.session);
+      await loadProfile(data.session.user);
+    }
   }
 
-  // =========================
-  // REGISTER
-  // =========================
+  /* =========================
+     REGISTER
+  ========================= */
 
   async function handleRegister(e) {
     e.preventDefault();
 
-    resetMessage();
+    clearMessage();
 
     if (!name || !email || !password) {
-      setError("Nama, email dan password wajib diisi.");
+      setError("Semua data wajib diisi.");
       return;
     }
 
@@ -117,11 +155,11 @@ export default function App() {
 
     const { data, error } =
       await supabase.auth.signUp({
-        email,
+        email: email.trim(),
         password,
         options: {
           data: {
-            full_name: name,
+            full_name: name.trim(),
           },
         },
       });
@@ -133,24 +171,23 @@ export default function App() {
       return;
     }
 
-    if (data.session) {
+    if (data?.session) {
       setSession(data.session);
-      setMessage("Akun berhasil dibuat.");
+      await loadProfile(data.session.user);
     } else {
       setMessage(
-        "Akun berhasil dibuat. Silakan cek email untuk verifikasi."
+        "Akun berhasil dibuat. Silakan cek email kamu."
       );
       setPage("login");
     }
   }
 
-  // =========================
-  // GOOGLE LOGIN
-  // =========================
+  /* =========================
+     GOOGLE
+  ========================= */
 
-  async function handleGoogleLogin() {
-    resetMessage();
-    setProcessing(true);
+  async function handleGoogle() {
+    clearMessage();
 
     const { error } =
       await supabase.auth.signInWithOAuth({
@@ -160,24 +197,22 @@ export default function App() {
         },
       });
 
-    setProcessing(false);
-
     if (error) {
       setError(error.message);
     }
   }
 
-  // =========================
-  // FORGOT PASSWORD
-  // =========================
+  /* =========================
+     FORGOT PASSWORD
+  ========================= */
 
-  async function handleForgotPassword(e) {
+  async function handleForgot(e) {
     e.preventDefault();
 
-    resetMessage();
+    clearMessage();
 
     if (!email) {
-      setError("Masukkan email terlebih dahulu.");
+      setError("Masukkan email.");
       return;
     }
 
@@ -185,7 +220,7 @@ export default function App() {
 
     const { error } =
       await supabase.auth.resetPasswordForEmail(
-        email,
+        email.trim(),
         {
           redirectTo: window.location.origin,
         }
@@ -199,622 +234,980 @@ export default function App() {
     }
 
     setMessage(
-      "Link reset password sudah dikirim ke email kamu."
+      "Link reset password sudah dikirim ke email."
     );
   }
 
-  // =========================
-  // LOGOUT
-  // =========================
+  /* =========================
+     LOGOUT
+  ========================= */
 
-  async function handleLogout() {
-    setProcessing(true);
-
+  async function logout() {
     await supabase.auth.signOut();
 
     setSession(null);
+    setProfile(null);
 
     setEmail("");
     setPassword("");
     setName("");
 
-    setProcessing(false);
     setPage("login");
   }
 
-  // =========================
-  // LOADING
-  // =========================
+  /* =========================
+     ADMIN LOAD MEMBERS
+  ========================= */
+
+  async function loadMembers() {
+    const { data, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .order("created_at", {
+        ascending: false,
+      });
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setMembers(data || []);
+  }
+
+  /* =========================
+     ADMIN UPDATE STATUS
+  ========================= */
+
+  async function toggleMemberStatus(member) {
+    const newStatus =
+      member.status === "active"
+        ? "banned"
+        : "active";
+
+    const { error } = await supabase
+      .from("profiles")
+      .update({
+        status: newStatus,
+      })
+      .eq("id", member.id);
+
+    if (error) {
+      alert(error.message);
+      return;
+    }
+
+    loadMembers();
+  }
+
+  /* =========================
+     COPY API KEY
+  ========================= */
+
+  async function copyKey(key) {
+    if (!key) return;
+
+    await navigator.clipboard.writeText(key);
+
+    setMessage("API Key berhasil disalin.");
+
+    setTimeout(() => {
+      setMessage("");
+    }, 2000);
+  }
+
+  /* =========================
+     LOADING
+  ========================= */
 
   if (loading) {
     return (
       <div className="app">
-        <div className="card loading-card">
+        <div className="loading-box">
+          <div className="logo">D</div>
+
+          <h2>DINSTORE API</h2>
+
+          <p>Memuat sistem...</p>
+
+          <div className="spinner"></div>
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================
+     LOGIN
+  ========================= */
+
+  if (!session) {
+    return (
+      <div className="app">
+        <div className="auth-card">
 
           <div className="logo">
             D
           </div>
 
-          <h1>DINSTORE API</h1>
-
-          <p>
-            Memeriksa sesi login...
-          </p>
-
-          <div className="spinner"></div>
-
-        </div>
-      </div>
-    );
-  }
-
-  // =========================
-  // DASHBOARD
-  // =========================
-
-  if (session) {
-    const user = session.user;
-
-    const displayName =
-      user?.user_metadata?.full_name ||
-      user?.user_metadata?.name ||
-      user?.email?.split("@")[0] ||
-      "User";
-
-    return (
-      <div className="app">
-
-        <div className="dashboard">
-
-          {/* HEADER */}
-
-          <header className="dashboard-header">
-
-            <div>
-              <div className="brand-small">
-                DINSTORE
-              </div>
-
-              <h1>
-                Dashboard
-              </h1>
-
-              <p>
-                Selamat datang kembali, {displayName}.
-              </p>
-            </div>
-
-            <div className="online">
-              <span></span>
-              ONLINE
-            </div>
-
-          </header>
-
-          {/* USER CARD */}
-
-          <section className="user-card">
-
-            <div className="avatar">
-              {displayName
-                .charAt(0)
-                .toUpperCase()}
-            </div>
-
-            <div className="user-data">
-
-              <span>
-                ACCOUNT
-              </span>
-
-              <strong>
-                {displayName}
-              </strong>
-
-              <p>
-                {user.email}
-              </p>
-
-            </div>
-
-          </section>
-
-          {/* STATISTICS */}
-
-          <section className="stats">
-
-            <div className="stat-card">
-              <span>STATUS</span>
-              <strong>ONLINE</strong>
-            </div>
-
-            <div className="stat-card">
-              <span>API</span>
-              <strong>35+</strong>
-            </div>
-
-            <div className="stat-card">
-              <span>ACCOUNT</span>
-              <strong>ACTIVE</strong>
-            </div>
-
-          </section>
-
-          {/* API MENU */}
-
-          <section className="api-section">
-
-            <div className="section-title">
-              <span>API SYSTEM</span>
-              <h2>
-                DINSTORE API
-              </h2>
-            </div>
-
-            <div className="api-grid">
-
-              <button
-                className="api-card"
-                onClick={() => {
-                  alert(
-                    "Endpoint TikTok:\n/api/download/tiktok"
-                  );
-                }}
-              >
-                <div className="api-icon">
-                  ♪
-                </div>
-
-                <div>
-                  <strong>
-                    TikTok Downloader
-                  </strong>
-
-                  <p>
-                    /api/download/tiktok
-                  </p>
-                </div>
-
-                <span>→</span>
-              </button>
-
-              <button
-                className="api-card"
-                onClick={() => {
-                  alert(
-                    "Endpoint ChatGPT:\n/api/ai/chatgpt"
-                  );
-                }}
-              >
-                <div className="api-icon">
-                  AI
-                </div>
-
-                <div>
-                  <strong>
-                    ChatGPT AI
-                  </strong>
-
-                  <p>
-                    /api/ai/chatgpt
-                  </p>
-                </div>
-
-                <span>→</span>
-              </button>
-
-              <button
-                className="api-card"
-                onClick={() => {
-                  alert(
-                    "API Tester akan dibuat di tahap berikutnya."
-                  );
-                }}
-              >
-                <div className="api-icon">
-                  ⚡
-                </div>
-
-                <div>
-                  <strong>
-                    API Tester
-                  </strong>
-
-                  <p>
-                    Test endpoint secara langsung
-                  </p>
-                </div>
-
-                <span>→</span>
-              </button>
-
-            </div>
-
-          </section>
-
-          {/* QUICK ACTION */}
-
-          <section className="quick-section">
-
-            <button
-              onClick={() => {
-                window.open(
-                  "/api/download/tiktok",
-                  "_blank"
-                );
-              }}
-            >
-              DOCUMENTATION
-            </button>
-
-            <button
-              onClick={() => {
-                alert(
-                  "Koneksi API akan dibuat pada tahap berikutnya."
-                );
-              }}
-            >
-              CONNECT API
-            </button>
-
-          </section>
-
-          {/* LOGOUT */}
-
-          <button
-            className="logout"
-            onClick={handleLogout}
-            disabled={processing}
-          >
-            {processing
-              ? "LOGGING OUT..."
-              : "LOGOUT"}
-          </button>
-
-          <div className="footer">
-            DINSTORE API © 2026
+          <div className="brand">
+            DINSTORE API
           </div>
 
-        </div>
+          {page === "login" && (
+            <>
+              <h1>Login</h1>
 
-      </div>
-    );
-  }
-
-  // =========================
-  // LOGIN / REGISTER / FORGOT
-  // =========================
-
-  return (
-    <div className="app">
-
-      <div className="auth-card">
-
-        <div className="auth-logo">
-          D
-        </div>
-
-        <div className="auth-brand">
-          DINSTORE API
-        </div>
-
-        {/* LOGIN */}
-
-        {page === "login" && (
-          <>
-            <div className="auth-title">
-
-              <span>
-                WELCOME BACK
-              </span>
-
-              <h1>
-                Login
-              </h1>
-
-              <p>
-                Masuk ke akun DINSTORE kamu.
+              <p className="subtitle">
+                Masuk ke dashboard DINSTORE API.
               </p>
 
-            </div>
+              <form onSubmit={handleLogin}>
 
-            <form onSubmit={handleLogin}>
-
-              <label>
-                Email
-              </label>
-
-              <input
-                type="email"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                autoComplete="email"
-              />
-
-              <label>
-                Password
-              </label>
-
-              <div className="password-box">
+                <label>Email</label>
 
                 <input
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
-                  }
-                  placeholder="••••••••"
-                  value={password}
+                  type="email"
+                  placeholder="nama@email.com"
+                  value={email}
                   onChange={(e) =>
-                    setPassword(e.target.value)
+                    setEmail(e.target.value)
                   }
-                  autoComplete="current-password"
                 />
 
+                <label>Password</label>
+
+                <div className="password">
+                  <input
+                    type={
+                      showPassword
+                        ? "text"
+                        : "password"
+                    }
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) =>
+                      setPassword(e.target.value)
+                    }
+                  />
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setShowPassword(
+                        !showPassword
+                      )
+                    }
+                  >
+                    {showPassword
+                      ? "HIDE"
+                      : "SHOW"}
+                  </button>
+                </div>
+
                 <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(
-                      !showPassword
-                    )
-                  }
+                  className="primary"
+                  disabled={processing}
                 >
-                  {showPassword
-                    ? "HIDE"
-                    : "SHOW"}
+                  {processing
+                    ? "LOGIN..."
+                    : "LOGIN"}
                 </button>
 
-              </div>
+              </form>
 
               <button
-                className="primary-button"
-                type="submit"
-                disabled={processing}
+                className="google"
+                onClick={handleGoogle}
               >
-                {processing
-                  ? "LOGIN..."
-                  : "LOGIN"}
+                <b>G</b>
+                Login dengan Google
               </button>
 
-            </form>
-
-            <button
-              className="google-button"
-              onClick={handleGoogleLogin}
-              disabled={processing}
-            >
-              <span>
-                G
-              </span>
-
-              Continue with Google
-            </button>
-
-            <button
-              className="text-button"
-              onClick={() => {
-                resetMessage();
-                setPage("forgot");
-              }}
-            >
-              Lupa password?
-            </button>
-
-            <div className="switch-text">
-
-              Belum punya akun?
-
               <button
+                className="link"
                 onClick={() => {
-                  resetMessage();
-                  setPage("register");
+                  clearMessage();
+                  setPage("forgot");
                 }}
               >
-                Daftar
+                Lupa Password?
               </button>
 
-            </div>
-          </>
-        )}
+              <div className="switch">
+                Belum punya akun?
 
-        {/* REGISTER */}
+                <button
+                  onClick={() => {
+                    clearMessage();
+                    setPage("register");
+                  }}
+                >
+                  Daftar
+                </button>
+              </div>
+            </>
+          )}
 
-        {page === "register" && (
-          <>
-            <div className="auth-title">
+          {page === "register" && (
+            <>
+              <h1>Daftar</h1>
 
-              <span>
-                CREATE ACCOUNT
-              </span>
-
-              <h1>
-                Daftar
-              </h1>
-
-              <p>
+              <p className="subtitle">
                 Buat akun DINSTORE baru.
               </p>
 
-            </div>
+              <form onSubmit={handleRegister}>
 
-            <form onSubmit={handleRegister}>
-
-              <label>
-                Nama
-              </label>
-
-              <input
-                type="text"
-                placeholder="Nama kamu"
-                value={name}
-                onChange={(e) =>
-                  setName(e.target.value)
-                }
-                autoComplete="name"
-              />
-
-              <label>
-                Email
-              </label>
-
-              <input
-                type="email"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                autoComplete="email"
-              />
-
-              <label>
-                Password
-              </label>
-
-              <div className="password-box">
+                <label>Nama</label>
 
                 <input
-                  type={
-                    showPassword
-                      ? "text"
-                      : "password"
+                  type="text"
+                  placeholder="Nama lengkap"
+                  value={name}
+                  onChange={(e) =>
+                    setName(e.target.value)
                   }
+                />
+
+                <label>Email</label>
+
+                <input
+                  type="email"
+                  placeholder="nama@email.com"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                />
+
+                <label>Password</label>
+
+                <input
+                  type="password"
                   placeholder="Minimal 6 karakter"
                   value={password}
                   onChange={(e) =>
                     setPassword(e.target.value)
                   }
-                  autoComplete="new-password"
                 />
 
                 <button
-                  type="button"
-                  onClick={() =>
-                    setShowPassword(
-                      !showPassword
-                    )
-                  }
+                  className="primary"
+                  disabled={processing}
                 >
-                  {showPassword
-                    ? "HIDE"
-                    : "SHOW"}
+                  {processing
+                    ? "MEMBUAT..."
+                    : "DAFTAR"}
+                </button>
+
+              </form>
+
+              <div className="switch">
+                Sudah punya akun?
+
+                <button
+                  onClick={() => {
+                    clearMessage();
+                    setPage("login");
+                  }}
+                >
+                  Login
+                </button>
+              </div>
+            </>
+          )}
+
+          {page === "forgot" && (
+            <>
+              <h1>Lupa Password</h1>
+
+              <p className="subtitle">
+                Masukkan email untuk menerima
+                link reset password.
+              </p>
+
+              <form onSubmit={handleForgot}>
+
+                <label>Email</label>
+
+                <input
+                  type="email"
+                  placeholder="nama@email.com"
+                  value={email}
+                  onChange={(e) =>
+                    setEmail(e.target.value)
+                  }
+                />
+
+                <button
+                  className="primary"
+                  disabled={processing}
+                >
+                  {processing
+                    ? "MENGIRIM..."
+                    : "KIRIM LINK"}
+                </button>
+
+              </form>
+
+              <button
+                className="link"
+                onClick={() => {
+                  clearMessage();
+                  setPage("login");
+                }}
+              >
+                ← Kembali Login
+              </button>
+            </>
+          )}
+
+          {error && (
+            <div className="error">
+              {error}
+            </div>
+          )}
+
+          {message && (
+            <div className="success">
+              {message}
+            </div>
+          )}
+
+        </div>
+      </div>
+    );
+  }
+
+  /* =========================
+     ADMIN DASHBOARD
+  ========================= */
+
+  if (profile?.role === "admin") {
+    const filteredMembers =
+      members.filter((member) => {
+        const value =
+          `${member.email || ""} ${
+            member.username || ""
+          }`.toLowerCase();
+
+        return value.includes(
+          search.toLowerCase()
+        );
+      });
+
+    return (
+      <div className="dashboard">
+
+        <aside className="sidebar">
+
+          <div className="sidebar-brand">
+            <div className="logo">D</div>
+
+            <strong>
+              DINSTORE
+            </strong>
+          </div>
+
+          <div className="role">
+            ADMIN PANEL
+          </div>
+
+          <button
+            className={
+              adminPage === "overview"
+                ? "menu active"
+                : "menu"
+            }
+            onClick={() =>
+              setAdminPage("overview")
+            }
+          >
+            Overview
+          </button>
+
+          <button
+            className={
+              adminPage === "members"
+                ? "menu active"
+                : "menu"
+            }
+            onClick={() => {
+              setAdminPage("members");
+              loadMembers();
+            }}
+          >
+            Members
+          </button>
+
+          <button
+            className={
+              adminPage === "api"
+                ? "menu active"
+                : "menu"
+            }
+            onClick={() =>
+              setAdminPage("api")
+            }
+          >
+            API System
+          </button>
+
+          <button
+            className={
+              adminPage === "settings"
+                ? "menu active"
+                : "menu"
+            }
+            onClick={() =>
+              setAdminPage("settings")
+            }
+          >
+            Settings
+          </button>
+
+          <div className="sidebar-bottom">
+
+            <button
+              className="logout"
+              onClick={logout}
+            >
+              Logout
+            </button>
+
+          </div>
+
+        </aside>
+
+        <main className="main">
+
+          <header className="topbar">
+
+            <div>
+              <span>
+                ADMIN
+              </span>
+
+              <h1>
+                {adminPage === "overview"
+                  ? "Overview"
+                  : adminPage === "members"
+                  ? "Members"
+                  : adminPage === "api"
+                  ? "API System"
+                  : "Settings"}
+              </h1>
+            </div>
+
+            <div className="online">
+              <span></span>
+              SYSTEM ONLINE
+            </div>
+
+          </header>
+
+          {/* OVERVIEW */}
+
+          {adminPage === "overview" && (
+            <>
+              <div className="stats">
+
+                <div className="stat">
+                  <span>
+                    TOTAL MEMBER
+                  </span>
+
+                  <strong>
+                    {members.length || "—"}
+                  </strong>
+                </div>
+
+                <div className="stat">
+                  <span>
+                    ACTIVE
+                  </span>
+
+                  <strong>
+                    {members.filter(
+                      (x) =>
+                        x.status ===
+                        "active"
+                    ).length || "—"}
+                  </strong>
+                </div>
+
+                <div className="stat">
+                  <span>
+                    API
+                  </span>
+
+                  <strong>
+                    35+
+                  </strong>
+                </div>
+
+                <div className="stat">
+                  <span>
+                    ROLE
+                  </span>
+
+                  <strong>
+                    ADMIN
+                  </strong>
+                </div>
+
+              </div>
+
+              <div className="panel">
+
+                <h2>
+                  DINSTORE API
+                </h2>
+
+                <p>
+                  Selamat datang di panel
+                  administrator.
+                </p>
+
+                <div className="api-list">
+
+                  <div>
+                    <strong>
+                      TikTok Downloader
+                    </strong>
+
+                    <code>
+                      /api/download/tiktok
+                    </code>
+                  </div>
+
+                  <div>
+                    <strong>
+                      ChatGPT
+                    </strong>
+
+                    <code>
+                      /api/ai/chatgpt
+                    </code>
+                  </div>
+
+                </div>
+
+              </div>
+            </>
+          )}
+
+          {/* MEMBERS */}
+
+          {adminPage === "members" && (
+            <div className="panel">
+
+              <div className="panel-head">
+
+                <h2>
+                  Member Management
+                </h2>
+
+                <button
+                  className="refresh"
+                  onClick={loadMembers}
+                >
+                  Refresh
                 </button>
 
               </div>
 
-              <button
-                className="primary-button"
-                type="submit"
-                disabled={processing}
-              >
-                {processing
-                  ? "MEMBUAT AKUN..."
-                  : "DAFTAR"}
-              </button>
+              <input
+                className="search"
+                placeholder="Cari email / username..."
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+              />
 
-            </form>
+              <div className="members">
 
-            <div className="switch-text">
+                {filteredMembers.map(
+                  (member) => (
+                    <div
+                      className="member"
+                      key={member.id}
+                    >
 
-              Sudah punya akun?
+                      <div className="member-avatar">
+                        {(member.username ||
+                          member.email ||
+                          "U")
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
 
-              <button
-                onClick={() => {
-                  resetMessage();
-                  setPage("login");
-                }}
-              >
-                Login
-              </button>
+                      <div className="member-info">
+
+                        <strong>
+                          {member.username ||
+                            "Member"}
+                        </strong>
+
+                        <span>
+                          {member.email}
+                        </span>
+
+                        <code>
+                          {member.api_key ||
+                            "Tidak ada API key"}
+                        </code>
+
+                      </div>
+
+                      <div className="member-actions">
+
+                        <span
+                          className={
+                            member.status ===
+                            "active"
+                              ? "badge active-badge"
+                              : "badge banned-badge"
+                          }
+                        >
+                          {member.status ||
+                            "unknown"}
+                        </span>
+
+                        {member.api_key && (
+                          <button
+                            onClick={() =>
+                              copyKey(
+                                member.api_key
+                              )
+                            }
+                          >
+                            Copy Key
+                          </button>
+                        )}
+
+                        <button
+                          onClick={() =>
+                            toggleMemberStatus(
+                              member
+                            )
+                          }
+                        >
+                          {member.status ===
+                          "active"
+                            ? "Ban"
+                            : "Aktifkan"}
+                        </button>
+
+                      </div>
+
+                    </div>
+                  )
+                )}
+
+                {filteredMembers.length ===
+                  0 && (
+                  <div className="empty">
+                    Belum ada data member.
+                  </div>
+                )}
+
+              </div>
 
             </div>
-          </>
-        )}
+          )}
 
-        {/* FORGOT PASSWORD */}
+          {/* API */}
 
-        {page === "forgot" && (
-          <>
-            <div className="auth-title">
+          {adminPage === "api" && (
+            <div className="panel">
 
-              <span>
-                ACCOUNT RECOVERY
-              </span>
+              <h2>
+                API System
+              </h2>
 
-              <h1>
-                Lupa Password
-              </h1>
+              <div className="endpoint">
 
-              <p>
-                Masukkan email untuk mendapatkan
-                link reset password.
+                <span className="method get">
+                  GET
+                </span>
+
+                <code>
+                  /api/download/tiktok
+                </code>
+
+              </div>
+
+              <div className="endpoint">
+
+                <span className="method post">
+                  POST
+                </span>
+
+                <code>
+                  /api/ai/chatgpt
+                </code>
+
+              </div>
+
+              <p className="muted">
+                Endpoint API bisa kita tambahkan
+                satu per satu setelah dashboard
+                selesai.
               </p>
 
             </div>
+          )}
 
-            <form onSubmit={handleForgotPassword}>
+          {/* SETTINGS */}
 
-              <label>
-                Email
-              </label>
+          {adminPage === "settings" && (
+            <div className="panel">
 
-              <input
-                type="email"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                autoComplete="email"
-              />
+              <h2>
+                Settings
+              </h2>
+
+              <div className="setting">
+                <span>
+                  Admin
+                </span>
+
+                <strong>
+                  {session.user.email}
+                </strong>
+              </div>
+
+              <div className="setting">
+                <span>
+                  Role
+                </span>
+
+                <strong>
+                  ADMIN
+                </strong>
+              </div>
 
               <button
-                className="primary-button"
-                type="submit"
-                disabled={processing}
+                className="logout-large"
+                onClick={logout}
               >
-                {processing
-                  ? "MENGIRIM..."
-                  : "KIRIM LINK RESET"}
+                Logout
               </button>
 
-            </form>
+            </div>
+          )}
+
+        </main>
+
+      </div>
+    );
+  }
+
+  /* =========================
+     MEMBER DASHBOARD
+  ========================= */
+
+  return (
+    <div className="dashboard">
+
+      <aside className="sidebar">
+
+        <div className="sidebar-brand">
+
+          <div className="logo">
+            D
+          </div>
+
+          <strong>
+            DINSTORE
+          </strong>
+
+        </div>
+
+        <div className="role">
+          MEMBER
+        </div>
+
+        <button className="menu active">
+          Dashboard
+        </button>
+
+        <button className="menu">
+          API Documentation
+        </button>
+
+        <button className="menu">
+          API Tester
+        </button>
+
+        <button className="menu">
+          Profile
+        </button>
+
+        <div className="sidebar-bottom">
+
+          <button
+            className="logout"
+            onClick={logout}
+          >
+            Logout
+          </button>
+
+        </div>
+
+      </aside>
+
+      <main className="main">
+
+        <header className="topbar">
+
+          <div>
+            <span>
+              MEMBER
+            </span>
+
+            <h1>
+              Dashboard
+            </h1>
+          </div>
+
+          <div className="online">
+            <span></span>
+            ONLINE
+          </div>
+
+        </header>
+
+        <div className="stats">
+
+          <div className="stat">
+            <span>
+              ACCOUNT
+            </span>
+
+            <strong>
+              ACTIVE
+            </strong>
+          </div>
+
+          <div className="stat">
+            <span>
+              API
+            </span>
+
+            <strong>
+              35+
+            </strong>
+          </div>
+
+          <div className="stat">
+            <span>
+              REQUEST
+            </span>
+
+            <strong>
+              {profile?.total_requests ||
+                0}
+            </strong>
+          </div>
+
+        </div>
+
+        <div className="panel">
+
+          <h2>
+            API KEY
+          </h2>
+
+          <p>
+            Gunakan API key ini untuk
+            mengakses API DINSTORE.
+          </p>
+
+          <div className="api-key">
+
+            <code>
+              {profile?.api_key ||
+                "API KEY BELUM TERSEDIA"}
+            </code>
+
+            {profile?.api_key && (
+              <button
+                onClick={() =>
+                  copyKey(
+                    profile.api_key
+                  )
+                }
+              >
+                COPY
+              </button>
+            )}
+
+          </div>
+
+        </div>
+
+        <div className="panel">
+
+          <h2>
+            API ENDPOINT
+          </h2>
+
+          <div className="endpoint">
+
+            <span className="method get">
+              GET
+            </span>
+
+            <code>
+              /api/download/tiktok
+            </code>
 
             <button
-              className="text-button"
-              onClick={() => {
-                resetMessage();
-                setPage("login");
-              }}
+              onClick={() =>
+                alert(
+                  "API Tester TikTok akan dibuat."
+                )
+              }
             >
-              ← Kembali ke Login
+              TEST
             </button>
 
-          </>
-        )}
-
-        {/* MESSAGE */}
-
-        {error && (
-          <div className="message error">
-            {error}
           </div>
-        )}
+
+          <div className="endpoint">
+
+            <span className="method post">
+              POST
+            </span>
+
+            <code>
+              /api/ai/chatgpt
+            </code>
+
+            <button
+              onClick={() =>
+                alert(
+                  "API Tester ChatGPT akan dibuat."
+                )
+              }
+            >
+              TEST
+            </button>
+
+          </div>
+
+        </div>
 
         {message && (
-          <div className="message success">
+          <div className="success">
             {message}
           </div>
         )}
 
-        <div className="auth-footer">
-          DINSTORE API © 2026
-        </div>
-
-      </div>
+      </main>
 
     </div>
   );
