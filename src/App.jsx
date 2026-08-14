@@ -3,23 +3,19 @@ import { createClient } from "@supabase/supabase-js";
 import "./style.css";
 
 /* =========================================================
-   SUPABASE
+   SUPABASE CONFIG
 ========================================================= */
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
-let supabase = null;
-
-if (supabaseUrl && supabaseAnonKey) {
-  supabase = createClient(
-    supabaseUrl,
-    supabaseAnonKey
-  );
-}
+const supabase =
+  SUPABASE_URL && SUPABASE_ANON_KEY
+    ? createClient(SUPABASE_URL, SUPABASE_ANON_KEY)
+    : null;
 
 /* =========================================================
-   MAIN APP
+   APP
 ========================================================= */
 
 export default function App() {
@@ -32,48 +28,46 @@ export default function App() {
       return;
     }
 
-    let mounted = true;
-
     supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setSession(data.session);
-        setLoading(false);
-      }
+      setSession(data.session);
+      setLoading(false);
     });
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, newSession) => {
-        setSession(newSession);
-        setLoading(false);
-      }
-    );
+    } = supabase.auth.onAuthStateChange((_event, newSession) => {
+      setSession(newSession);
+    });
 
     return () => {
-      mounted = false;
       subscription.unsubscribe();
     };
   }, []);
+
+  /* =======================================================
+     ENV ERROR
+  ======================================================= */
+
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+    return <EnvError />;
+  }
 
   /* =======================================================
      LOADING
   ======================================================= */
 
   if (loading) {
-    return <LoadingScreen />;
+    return (
+      <div className="app-loading">
+        <div className="loading-logo">D</div>
+        <div className="loading-text">DINSTORE API</div>
+        <div className="loading-spinner"></div>
+      </div>
+    );
   }
 
   /* =======================================================
-     SUPABASE CONFIG ERROR
-  ======================================================= */
-
-  if (!supabase) {
-    return <ConfigError />;
-  }
-
-  /* =======================================================
-     BELUM LOGIN
+     AUTH
   ======================================================= */
 
   if (!session) {
@@ -81,65 +75,49 @@ export default function App() {
   }
 
   /* =======================================================
-     SUDAH LOGIN
+     DASHBOARD
   ======================================================= */
 
   return <Dashboard session={session} />;
 }
 
 /* =========================================================
-   LOADING SCREEN
+   ENV ERROR
 ========================================================= */
 
-function LoadingScreen() {
+function EnvError() {
   return (
-    <div className="app-loading">
-      <div className="loading-box">
-        <div className="loading-logo">D</div>
+    <div className="app">
+      <div className="background-grid"></div>
 
-        <div className="loading-title">
-          DINSTORE API
+      <div className="error-container">
+        <div className="error-card">
+          <div className="brand">
+            <div className="brand-logo">D</div>
+            <div>
+              <strong>DINSTORE</strong>
+              <span>API</span>
+            </div>
+          </div>
+
+          <div className="error-icon">!</div>
+
+          <h1>Supabase belum dikonfigurasi</h1>
+
+          <p>
+            Tambahkan dua Environment Variable berikut di project Vercel:
+          </p>
+
+          <div className="env-box">
+            <div>VITE_SUPABASE_URL</div>
+            <div>VITE_SUPABASE_ANON_KEY</div>
+          </div>
+
+          <p className="small">
+            Setelah menambahkan Environment Variable, lakukan redeploy
+            project di Vercel.
+          </p>
         </div>
-
-        <div className="loading-spinner" />
-
-        <div className="loading-text">
-          Memuat aplikasi...
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* =========================================================
-   CONFIG ERROR
-========================================================= */
-
-function ConfigError() {
-  return (
-    <div className="app-loading">
-      <div className="config-error">
-        <div className="error-icon">!</div>
-
-        <h2>Supabase belum dikonfigurasi</h2>
-
-        <p>
-          Tambahkan environment variable berikut di
-          Vercel:
-        </p>
-
-        <div className="env-code">
-          VITE_SUPABASE_URL
-        </div>
-
-        <div className="env-code">
-          VITE_SUPABASE_ANON_KEY
-        </div>
-
-        <p className="small-text">
-          Setelah menambahkan Environment Variables,
-          lakukan redeploy di Vercel.
-        </p>
       </div>
     </div>
   );
@@ -165,10 +143,6 @@ function AuthPage() {
     setError("");
   }
 
-  /* =======================================================
-     LOGIN
-  ======================================================= */
-
   async function handleLogin(e) {
     e.preventDefault();
 
@@ -181,23 +155,18 @@ function AuthPage() {
 
     setLoading(true);
 
-    const { error } =
-      await supabase.auth.signInWithPassword({
-        email: email.trim(),
-        password,
-      });
+    const { error } = await supabase.auth.signInWithPassword({
+      email,
+      password,
+    });
 
     setLoading(false);
 
     if (error) {
-      setError(getAuthError(error));
+      setError(error.message);
       return;
     }
   }
-
-  /* =======================================================
-     REGISTER
-  ======================================================= */
 
   async function handleRegister(e) {
     e.preventDefault();
@@ -205,35 +174,31 @@ function AuthPage() {
     resetMessages();
 
     if (!name || !email || !password) {
-      setError("Semua data wajib diisi.");
+      setError("Nama, email dan password wajib diisi.");
       return;
     }
 
     if (password.length < 6) {
-      setError(
-        "Password minimal 6 karakter."
-      );
+      setError("Password minimal 6 karakter.");
       return;
     }
 
     setLoading(true);
 
-    const { data, error } =
-      await supabase.auth.signUp({
-        email: email.trim(),
-        password,
-        options: {
-          data: {
-            name: name.trim(),
-            full_name: name.trim(),
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
         },
-      });
+      },
+    });
 
     setLoading(false);
 
     if (error) {
-      setError(getAuthError(error));
+      setError(error.message);
       return;
     }
 
@@ -242,295 +207,290 @@ function AuthPage() {
     }
 
     setMessage(
-      "Akun berhasil dibuat. Silakan login."
+      "Akun berhasil dibuat. Jika konfirmasi email aktif di Supabase, silakan cek email kamu."
     );
-
-    setMode("login");
-    setPassword("");
   }
-
-  /* =======================================================
-     GOOGLE LOGIN
-  ======================================================= */
 
   async function handleGoogleLogin() {
     resetMessages();
     setLoading(true);
 
-    const { error } =
-      await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: window.location.origin,
-        },
-      });
+    const redirectTo = window.location.origin;
+
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+      },
+    });
 
     if (error) {
       setLoading(false);
-      setError(getAuthError(error));
+      setError(error.message);
     }
+  }
+
+  async function handleForgotPassword(e) {
+    e.preventDefault();
+
+    resetMessages();
+
+    if (!email) {
+      setError("Masukkan email terlebih dahulu.");
+      return;
+    }
+
+    setLoading(true);
+
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+
+    setLoading(false);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setMessage("Link reset password sudah dikirim ke email kamu.");
+  }
+
+  /* =======================================================
+     LOGIN
+  ======================================================= */
+
+  if (mode === "login") {
+    return (
+      <AuthLayout>
+        <div className="auth-card">
+          <Brand />
+
+          <div className="auth-header">
+            <span className="eyebrow">MEMBER ACCESS</span>
+            <h1>LOGIN</h1>
+            <p>Masuk ke akun DINSTORE API kamu.</p>
+          </div>
+
+          {error && <Alert type="error">{error}</Alert>}
+          {message && <Alert type="success">{message}</Alert>}
+
+          <form onSubmit={handleLogin}>
+            <label>Email</label>
+
+            <input
+              type="email"
+              placeholder="nama@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
+
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="current-password"
+            />
+
+            <button className="primary-btn" disabled={loading}>
+              {loading ? "MEMPROSES..." : "LOGIN"}
+            </button>
+          </form>
+
+          <button
+            className="google-btn"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+          >
+            <GoogleIcon />
+            <span>Login dengan Google</span>
+          </button>
+
+          <div className="auth-links">
+            <button
+              onClick={() => {
+                resetMessages();
+                setMode("forgot");
+              }}
+            >
+              Lupa password?
+            </button>
+          </div>
+
+          <div className="auth-bottom">
+            Belum punya akun?
+
+            <button
+              onClick={() => {
+                resetMessages();
+                setMode("register");
+              }}
+            >
+              Daftar sekarang
+            </button>
+          </div>
+        </div>
+      </AuthLayout>
+    );
+  }
+
+  /* =======================================================
+     REGISTER
+  ======================================================= */
+
+  if (mode === "register") {
+    return (
+      <AuthLayout>
+        <div className="auth-card">
+          <Brand />
+
+          <div className="auth-header">
+            <span className="eyebrow">MEMBER ACCESS</span>
+            <h1>DAFTAR MEMBER</h1>
+            <p>Buat akun baru dan dapatkan akses API.</p>
+          </div>
+
+          {error && <Alert type="error">{error}</Alert>}
+          {message && <Alert type="success">{message}</Alert>}
+
+          <form onSubmit={handleRegister}>
+            <label>Nama</label>
+
+            <input
+              type="text"
+              placeholder="Nama kamu"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              autoComplete="name"
+            />
+
+            <label>Email</label>
+
+            <input
+              type="email"
+              placeholder="nama@email.com"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              autoComplete="email"
+            />
+
+            <label>Password</label>
+
+            <input
+              type="password"
+              placeholder="Minimal 6 karakter"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              autoComplete="new-password"
+            />
+
+            <button className="primary-btn" disabled={loading}>
+              {loading ? "MEMPROSES..." : "CREATE ACCOUNT"}
+            </button>
+          </form>
+
+          <button
+            className="google-btn"
+            onClick={handleGoogleLogin}
+            disabled={loading}
+          >
+            <GoogleIcon />
+            <span>Daftar dengan Google</span>
+          </button>
+
+          <div className="auth-bottom">
+            Sudah punya akun?
+
+            <button
+              onClick={() => {
+                resetMessages();
+                setMode("login");
+              }}
+            >
+              Login
+            </button>
+          </div>
+        </div>
+      </AuthLayout>
+    );
   }
 
   /* =======================================================
      FORGOT PASSWORD
   ======================================================= */
 
-  async function handleForgotPassword() {
-    resetMessages();
-
-    if (!email) {
-      setError(
-        "Masukkan email terlebih dahulu."
-      );
-      return;
-    }
-
-    setLoading(true);
-
-    const { error } =
-      await supabase.auth.resetPasswordForEmail(
-        email.trim(),
-        {
-          redirectTo:
-            `${window.location.origin}/reset-password`,
-        }
-      );
-
-    setLoading(false);
-
-    if (error) {
-      setError(getAuthError(error));
-      return;
-    }
-
-    setMessage(
-      "Link reset password sudah dikirim ke email."
-    );
-  }
-
   return (
-    <div className="auth-page">
+    <AuthLayout>
+      <div className="auth-card">
+        <Brand />
 
-      {/* TOP BAR */}
-      <header className="auth-header">
-
-        <div className="brand">
-          <div className="brand-logo">
-            D
-          </div>
-
-          <div>
-            <div className="brand-name">
-              DINSTORE
-            </div>
-
-            <div className="brand-sub">
-              API
-            </div>
-          </div>
+        <div className="auth-header">
+          <span className="eyebrow">ACCOUNT RECOVERY</span>
+          <h1>LUPA PASSWORD</h1>
+          <p>Masukkan email untuk mendapatkan link reset password.</p>
         </div>
 
-        <div className="status-pill">
-          <span />
-          ONLINE
-        </div>
+        {error && <Alert type="error">{error}</Alert>}
+        {message && <Alert type="success">{message}</Alert>}
 
+        <form onSubmit={handleForgotPassword}>
+          <label>Email</label>
+
+          <input
+            type="email"
+            placeholder="nama@email.com"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            autoComplete="email"
+          />
+
+          <button className="primary-btn" disabled={loading}>
+            {loading ? "MENGIRIM..." : "KIRIM LINK RESET"}
+          </button>
+        </form>
+
+        <div className="auth-bottom">
+          Ingat password?
+
+          <button
+            onClick={() => {
+              resetMessages();
+              setMode("login");
+            }}
+          >
+            Kembali Login
+          </button>
+        </div>
+      </div>
+    </AuthLayout>
+  );
+}
+
+/* =========================================================
+   AUTH LAYOUT
+========================================================= */
+
+function AuthLayout({ children }) {
+  return (
+    <div className="app">
+      <div className="background-grid"></div>
+
+      <header className="topbar">
+        <Brand />
+
+        <div className="topbar-status">
+          <span className="status-dot"></span>
+          SYSTEM ONLINE
+        </div>
       </header>
 
-      {/* AUTH CONTENT */}
-      <main className="auth-main">
+      <main className="auth-main">{children}</main>
 
-        <div className="auth-card">
-
-          {/* LOGO */}
-          <div className="auth-logo">
-            D
-          </div>
-
-          <div className="auth-eyebrow">
-            MEMBER ACCESS
-          </div>
-
-          <h1>
-            {mode === "login"
-              ? "LOGIN"
-              : "DAFTAR MEMBER"}
-          </h1>
-
-          <p className="auth-description">
-            {mode === "login"
-              ? "Masuk ke akun DINSTORE API kamu."
-              : "Buat akun baru dan dapatkan akses API."}
-          </p>
-
-          {/* GOOGLE */}
-          <button
-            type="button"
-            className="google-button"
-            onClick={handleGoogleLogin}
-            disabled={loading}
-          >
-            <span className="google-icon">
-              G
-            </span>
-
-            <span>
-              {loading
-                ? "Memproses..."
-                : "Lanjutkan dengan Google"}
-            </span>
-          </button>
-
-          <div className="divider">
-            <span />
-            <b>ATAU</b>
-            <span />
-          </div>
-
-          {/* FORM */}
-          <form
-            onSubmit={
-              mode === "login"
-                ? handleLogin
-                : handleRegister
-            }
-          >
-
-            {mode === "register" && (
-              <div className="input-group">
-
-                <label>Nama</label>
-
-                <input
-                  type="text"
-                  placeholder="Nama kamu"
-                  value={name}
-                  onChange={(e) =>
-                    setName(e.target.value)
-                  }
-                  autoComplete="name"
-                />
-
-              </div>
-            )}
-
-            <div className="input-group">
-
-              <label>Email</label>
-
-              <input
-                type="email"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(e) =>
-                  setEmail(e.target.value)
-                }
-                autoComplete="email"
-              />
-
-            </div>
-
-            <div className="input-group">
-
-              <label>Password</label>
-
-              <input
-                type="password"
-                placeholder="Minimal 6 karakter"
-                value={password}
-                onChange={(e) =>
-                  setPassword(e.target.value)
-                }
-                autoComplete={
-                  mode === "login"
-                    ? "current-password"
-                    : "new-password"
-                }
-              />
-
-            </div>
-
-            {mode === "login" && (
-              <button
-                type="button"
-                className="forgot-button"
-                onClick={handleForgotPassword}
-              >
-                Lupa password?
-              </button>
-            )}
-
-            {/* ERROR */}
-            {error && (
-              <div className="auth-alert error">
-                {error}
-              </div>
-            )}
-
-            {/* SUCCESS */}
-            {message && (
-              <div className="auth-alert success">
-                {message}
-              </div>
-            )}
-
-            <button
-              type="submit"
-              className="primary-button"
-              disabled={loading}
-            >
-              {loading
-                ? "MEMPROSES..."
-                : mode === "login"
-                ? "LOGIN"
-                : "CREATE ACCOUNT"}
-            </button>
-
-          </form>
-
-          {/* SWITCH */}
-          <div className="switch-auth">
-
-            {mode === "login" ? (
-              <>
-                Belum punya akun?
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetMessages();
-                    setMode("register");
-                  }}
-                >
-                  Daftar sekarang
-                </button>
-              </>
-            ) : (
-              <>
-                Sudah punya akun?
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    resetMessages();
-                    setMode("login");
-                  }}
-                >
-                  Login
-                </button>
-              </>
-            )}
-
-          </div>
-
-        </div>
-
-      </main>
-
-      <footer className="auth-footer">
-        © {new Date().getFullYear()} DINSTORE API
-      </footer>
-
+      <div className="floating-orb">D</div>
     </div>
   );
 }
@@ -541,12 +501,17 @@ function AuthPage() {
 
 function Dashboard({ session }) {
   const [active, setActive] = useState("home");
-  const [mobileMenu, setMobileMenu] =
-    useState(false);
-  const [loggingOut, setLoggingOut] =
-    useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
-  async function handleLogout() {
+  const user = session?.user;
+
+  const displayName =
+    user?.user_metadata?.name ||
+    user?.user_metadata?.full_name ||
+    user?.email?.split("@")[0] ||
+    "Member";
+
+  async function logout() {
     setLoggingOut(true);
 
     await supabase.auth.signOut();
@@ -554,460 +519,182 @@ function Dashboard({ session }) {
     setLoggingOut(false);
   }
 
-  const user =
-    session?.user;
-
-  const metadata =
-    user?.user_metadata || {};
-
-  const displayName =
-    metadata.full_name ||
-    metadata.name ||
-    user?.email?.split("@")[0] ||
-    "Member";
-
-  const avatar =
-    metadata.avatar_url ||
-    metadata.picture ||
-    "";
-
   return (
     <div className="dashboard">
+      <div className="background-grid"></div>
 
-      {/* HEADER */}
-      <header className="dashboard-header">
+      <header className="dashboard-topbar">
+        <Brand />
 
-        <div className="dashboard-brand">
+        <div className="dashboard-user">
+          <div className="user-info">
+            <strong>{displayName}</strong>
+            <span>{user?.email}</span>
+          </div>
 
-          <button
-            className="mobile-menu-button"
-            onClick={() =>
-              setMobileMenu(!mobileMenu)
-            }
-          >
-            ☰
+          <button onClick={logout} disabled={loggingOut}>
+            {loggingOut ? "..." : "LOGOUT"}
           </button>
-
-          <div className="brand-logo">
-            D
-          </div>
-
-          <div>
-            <div className="brand-name">
-              DINSTORE
-            </div>
-
-            <div className="brand-sub">
-              API
-            </div>
-          </div>
-
         </div>
-
-        <div className="header-right">
-
-          <div className="user-mini">
-
-            {avatar ? (
-              <img
-                src={avatar}
-                alt=""
-              />
-            ) : (
-              <div className="avatar-placeholder">
-                {displayName
-                  .charAt(0)
-                  .toUpperCase()}
-              </div>
-            )}
-
-            <div className="user-mini-info">
-              <strong>
-                {displayName}
-              </strong>
-
-              <small>
-                {user?.email}
-              </small>
-            </div>
-
-          </div>
-
-          <button
-            className="logout-button"
-            onClick={handleLogout}
-            disabled={loggingOut}
-          >
-            {loggingOut
-              ? "..."
-              : "Logout"}
-          </button>
-
-        </div>
-
       </header>
 
-      <div className="dashboard-body">
-
-        {/* SIDEBAR */}
-        <aside
-          className={`sidebar ${
-            mobileMenu
-              ? "sidebar-open"
-              : ""
-          }`}
-        >
-
+      <div className="dashboard-layout">
+        <aside className="sidebar">
           <nav>
-
-            <SidebarItem
+            <SidebarButton
               icon="⌂"
               label="HOME"
               active={active === "home"}
-              onClick={() => {
-                setActive("home");
-                setMobileMenu(false);
-              }}
+              onClick={() => setActive("home")}
             />
 
-            <SidebarItem
+            <SidebarButton
               icon="✦"
               label="AI"
               active={active === "ai"}
-              onClick={() => {
-                setActive("ai");
-                setMobileMenu(false);
-              }}
+              onClick={() => setActive("ai")}
             />
 
-            <SidebarItem
-              icon="◇"
+            <SidebarButton
+              icon="◈"
               label="ADMIN"
               active={active === "admin"}
-              onClick={() => {
-                setActive("admin");
-                setMobileMenu(false);
-              }}
+              onClick={() => setActive("admin")}
             />
 
-            <SidebarItem
-              icon="▣"
+            <SidebarButton
+              icon="▤"
               label="CACHE"
               active={active === "cache"}
-              onClick={() => {
-                setActive("cache");
-                setMobileMenu(false);
-              }}
+              onClick={() => setActive("cache")}
             />
 
-            <SidebarItem
-              icon="⇩"
+            <SidebarButton
+              icon="↓"
               label="DOWNLOAD"
               active={active === "download"}
-              onClick={() => {
-                setActive("download");
-                setMobileMenu(false);
-              }}
+              onClick={() => setActive("download")}
             />
 
-            <SidebarItem
+            <SidebarButton
               icon="⚒"
               label="TOOLS"
               active={active === "tools"}
-              onClick={() => {
-                setActive("tools");
-                setMobileMenu(false);
-              }}
+              onClick={() => setActive("tools")}
             />
 
-            <SidebarItem
+            <SidebarButton
               icon="♙"
               label="MEMBER"
               active={active === "member"}
-              onClick={() => {
-                setActive("member");
-                setMobileMenu(false);
-              }}
+              onClick={() => setActive("member")}
             />
-
           </nav>
-
         </aside>
 
-        {/* MAIN */}
         <main className="dashboard-main">
-
           {active === "home" && (
-            <HomePage
-              displayName={displayName}
-              email={user?.email}
-            />
+            <HomeContent user={user} displayName={displayName} />
           )}
 
-          {active === "ai" && (
-            <ComingPage
-              title="AI"
-              description="AI tools akan tersedia di halaman ini."
-            />
-          )}
-
-          {active === "admin" && (
-            <ComingPage
-              title="ADMIN"
-              description="Panel administrator DINSTORE API."
-            />
-          )}
-
-          {active === "cache" && (
-            <ComingPage
-              title="CACHE"
-              description="Kelola cache API."
-            />
-          )}
-
-          {active === "download" && (
-            <ComingPage
-              title="DOWNLOAD"
-              description="Daftar API downloader."
-            />
-          )}
-
-          {active === "tools" && (
-            <ComingPage
-              title="TOOLS"
-              description="Tools DINSTORE API."
-            />
-          )}
-
+          {active === "ai" && <SimplePage title="AI" />}
+          {active === "admin" && <SimplePage title="ADMIN" />}
+          {active === "cache" && <SimplePage title="CACHE" />}
+          {active === "download" && <SimplePage title="DOWNLOAD" />}
+          {active === "tools" && <SimplePage title="TOOLS" />}
           {active === "member" && (
-            <MemberPage
-              displayName={displayName}
-              email={user?.email}
-              userId={user?.id}
-            />
+            <MemberPage user={user} displayName={displayName} />
           )}
-
         </main>
-
       </div>
-
-      {/* MOBILE OVERLAY */}
-      {mobileMenu && (
-        <div
-          className="sidebar-overlay"
-          onClick={() =>
-            setMobileMenu(false)
-          }
-        />
-      )}
-
-      {/* CHAT BUTTON */}
-      <button
-        className="floating-button"
-        type="button"
-      >
-        W
-        <span />
-      </button>
-
     </div>
   );
 }
 
 /* =========================================================
-   SIDEBAR ITEM
+   HOME CONTENT
 ========================================================= */
 
-function SidebarItem({
-  icon,
-  label,
-  active,
-  onClick,
-}) {
+function HomeContent({ user, displayName }) {
   return (
-    <button
-      type="button"
-      className={`sidebar-item ${
-        active
-          ? "sidebar-item-active"
-          : ""
-      }`}
-      onClick={onClick}
-    >
-      <span className="sidebar-icon">
-        {icon}
-      </span>
+    <section className="content-wrapper">
+      <div className="hero-card">
+        <div className="hero-content">
+          <span className="eyebrow">WELCOME MEMBER</span>
 
-      <span>
-        {label}
-      </span>
-    </button>
-  );
-}
+          <h1>
+            HALO, <span>{displayName.toUpperCase()}</span>
+          </h1>
 
-/* =========================================================
-   HOME PAGE
-========================================================= */
+          <p>
+            Selamat datang di dashboard DINSTORE API.
+            Semua layanan API tersedia dari sini.
+          </p>
 
-function HomePage({
-  displayName,
-  email,
-}) {
-  return (
-    <div className="page-content">
-
-      <div className="welcome-card">
-
-        <div className="eyebrow">
-          DASHBOARD
+          <div className="hero-buttons">
+            <button>EXPLORE API</button>
+            <button className="secondary-btn">DOCUMENTATION</button>
+          </div>
         </div>
 
-        <h1>
-          Selamat datang,
-          <br />
-          <span>{displayName}</span>
-        </h1>
-
-        <p>
-          Kamu berhasil login ke
-          DINSTORE API.
-        </p>
-
-        <div className="email-badge">
-          {email}
+        <div className="hero-orb-large">
+          <span>D</span>
         </div>
-
       </div>
 
       <div className="stats-grid">
+        <StatCard
+          title="ACCOUNT"
+          value="ACTIVE"
+          description="Akun kamu aktif"
+        />
 
-        <div className="stat-card">
+        <StatCard
+          title="AUTH"
+          value="SECURE"
+          description="Supabase Authentication"
+        />
 
-          <div className="stat-icon">
-            ◉
-          </div>
-
-          <div>
-            <small>
-              STATUS
-            </small>
-
-            <strong>
-              ONLINE
-            </strong>
-          </div>
-
-        </div>
-
-        <div className="stat-card">
-
-          <div className="stat-icon">
-            API
-          </div>
-
-          <div>
-            <small>
-              SERVICE
-            </small>
-
-            <strong>
-              DINSTORE API
-            </strong>
-          </div>
-
-        </div>
-
-        <div className="stat-card">
-
-          <div className="stat-icon">
-            ✓
-          </div>
-
-          <div>
-            <small>
-              ACCOUNT
-            </small>
-
-            <strong>
-              VERIFIED
-            </strong>
-          </div>
-
-        </div>
-
+        <StatCard
+          title="API"
+          value="ONLINE"
+          description="DINSTORE API"
+        />
       </div>
 
-      <div className="section-card">
-
-        <div className="section-header">
-
+      <div className="content-card">
+        <div className="section-heading">
           <div>
-            <div className="eyebrow">
-              SYSTEM
-            </div>
-
-            <h2>
-              System Information
-            </h2>
+            <span className="eyebrow">SYSTEM</span>
+            <h2>System Information</h2>
           </div>
 
-          <div className="online-dot">
-            <span />
+          <span className="online-badge">
+            <span></span>
             ONLINE
-          </div>
-
+          </span>
         </div>
 
         <div className="system-list">
+          <div>
+            <span>EMAIL</span>
+            <strong>{user?.email || "-"}</strong>
+          </div>
 
-          <SystemRow
-            label="API Status"
-            value="Operational"
-          />
+          <div>
+            <span>USER ID</span>
+            <strong className="mono">{user?.id || "-"}</strong>
+          </div>
 
-          <SystemRow
-            label="Authentication"
-            value="Supabase Auth"
-          />
-
-          <SystemRow
-            label="Frontend"
-            value="Vite + React"
-          />
-
-          <SystemRow
-            label="Hosting"
-            value="Vercel"
-          />
-
+          <div>
+            <span>AUTH PROVIDER</span>
+            <strong>
+              {user?.app_metadata?.provider || "email"}
+            </strong>
+          </div>
         </div>
-
       </div>
-
-    </div>
-  );
-}
-
-/* =========================================================
-   SYSTEM ROW
-========================================================= */
-
-function SystemRow({
-  label,
-  value,
-}) {
-  return (
-    <div className="system-row">
-
-      <span>
-        {label}
-      </span>
-
-      <strong>
-        {value}
-      </strong>
-
-    </div>
+    </section>
   );
 }
 
@@ -1015,164 +702,160 @@ function SystemRow({
    MEMBER PAGE
 ========================================================= */
 
-function MemberPage({
-  displayName,
-  email,
-  userId,
-}) {
+function MemberPage({ user, displayName }) {
   return (
-    <div className="page-content">
-
+    <section className="content-wrapper">
       <div className="page-title">
-
-        <div className="eyebrow">
-          MEMBER
-        </div>
-
-        <h1>
-          Profil Member
-        </h1>
-
-        <p>
-          Informasi akun DINSTORE kamu.
-        </p>
-
+        <span className="eyebrow">MEMBER</span>
+        <h1>PROFILE</h1>
+        <p>Informasi akun kamu.</p>
       </div>
 
-      <div className="profile-card">
+      <div className="content-card">
+        <div className="profile-row">
+          <div className="profile-avatar">
+            {displayName.charAt(0).toUpperCase()}
+          </div>
 
-        <div className="profile-avatar">
-          {displayName
-            .charAt(0)
-            .toUpperCase()}
+          <div>
+            <h2>{displayName}</h2>
+            <p>{user?.email}</p>
+          </div>
         </div>
 
-        <div className="profile-info">
-
+        <div className="system-list">
           <div>
-            <small>
-              NAMA
-            </small>
-
-            <strong>
-              {displayName}
-            </strong>
+            <span>EMAIL</span>
+            <strong>{user?.email}</strong>
           </div>
 
           <div>
-            <small>
-              EMAIL
-            </small>
-
-            <strong>
-              {email}
-            </strong>
+            <span>USER ID</span>
+            <strong className="mono">{user?.id}</strong>
           </div>
 
           <div>
-            <small>
-              USER ID
-            </small>
-
-            <code>
-              {userId}
-            </code>
+            <span>STATUS</span>
+            <strong className="green">ACTIVE</strong>
           </div>
-
         </div>
-
       </div>
-
-    </div>
+    </section>
   );
 }
 
 /* =========================================================
-   COMING PAGE
+   SIMPLE PAGE
 ========================================================= */
 
-function ComingPage({
-  title,
-  description,
-}) {
+function SimplePage({ title }) {
   return (
-    <div className="page-content">
-
-      <div className="coming-card">
-
-        <div className="coming-icon">
-          D
-        </div>
-
-        <div className="eyebrow">
-          DINSTORE API
-        </div>
-
-        <h1>
-          {title}
-        </h1>
-
-        <p>
-          {description}
-        </p>
-
-        <div className="coming-badge">
-          COMING SOON
-        </div>
-
+    <section className="content-wrapper">
+      <div className="page-title">
+        <span className="eyebrow">DINSTORE API</span>
+        <h1>{title}</h1>
+        <p>Menu {title} sedang disiapkan.</p>
       </div>
 
+      <div className="content-card empty-card">
+        <div className="empty-icon">✦</div>
+        <h2>{title}</h2>
+        <p>Fitur akan tersedia di update berikutnya.</p>
+      </div>
+    </section>
+  );
+}
+
+/* =========================================================
+   SIDEBAR BUTTON
+========================================================= */
+
+function SidebarButton({ icon, label, active, onClick }) {
+  return (
+    <button
+      className={`sidebar-button ${active ? "active" : ""}`}
+      onClick={onClick}
+    >
+      <span className="sidebar-icon">{icon}</span>
+      <span>{label}</span>
+    </button>
+  );
+}
+
+/* =========================================================
+   STAT CARD
+========================================================= */
+
+function StatCard({ title, value, description }) {
+  return (
+    <div className="stat-card">
+      <span>{title}</span>
+      <strong>{value}</strong>
+      <small>{description}</small>
     </div>
   );
 }
 
 /* =========================================================
-   AUTH ERROR
+   BRAND
 ========================================================= */
 
-function getAuthError(error) {
-  const message =
-    error?.message || "";
+function Brand() {
+  return (
+    <div className="brand">
+      <div className="brand-logo">D</div>
 
-  if (
-    message
-      .toLowerCase()
-      .includes("invalid login credentials")
-  ) {
-    return "Email atau password salah.";
-  }
+      <div className="brand-name">
+        <strong>DINSTORE</strong>
+        <span>API</span>
+      </div>
+    </div>
+  );
+}
 
-  if (
-    message
-      .toLowerCase()
-      .includes("email not confirmed")
-  ) {
-    return "Email belum dikonfirmasi.";
-  }
+/* =========================================================
+   ALERT
+========================================================= */
 
-  if (
-    message
-      .toLowerCase()
-      .includes("user already registered")
-  ) {
-    return "Email sudah terdaftar.";
-  }
+function Alert({ type, children }) {
+  return (
+    <div className={`alert ${type}`}>
+      {children}
+    </div>
+  );
+}
 
-  if (
-    message
-      .toLowerCase()
-      .includes("password should be at least")
-  ) {
-    return "Password terlalu pendek.";
-  }
+/* =========================================================
+   GOOGLE ICON
+========================================================= */
 
-  if (
-    message
-      .toLowerCase()
-      .includes("provider is not enabled")
-  ) {
-    return "Login Google belum diaktifkan di Supabase.";
-  }
+function GoogleIcon() {
+  return (
+    <svg
+      width="20"
+      height="20"
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+    >
+      <path
+        fill="#4285F4"
+        d="M21.35 12.27c0-.68-.06-1.34-.18-1.97H12v3.73h5.24a4.48 4.48 0 0 1-1.94 2.94v2.45h3.14c1.84-1.69 2.91-4.18 2.91-7.15Z"
+      />
 
-  return message || "Terjadi kesalahan.";
+      <path
+        fill="#34A853"
+        d="M12 21.99c2.63 0 4.84-.87 6.45-2.36l-3.14-2.45c-.87.58-1.98.92-3.31.92-2.54 0-4.7-1.72-5.47-4.03H3.28v2.53A9.74 9.74 0 0 0 12 21.99Z"
+      />
+
+      <path
+        fill="#FBBC05"
+        d="M6.53 14.07a5.86 5.86 0 0 1 0-3.75V7.79H3.28a9.99 9.99 0 0 0 0 8.81l3.25-2.53Z"
+      />
+
+      <path
+        fill="#EA4335"
+        d="M12 6.29c1.43 0 2.71.49 3.72 1.46l2.79-2.79C16.84 3.38 14.63 2.01 12 2.01a9.74 9.74 0 0 0-8.72 5.78l3.25 2.53C7.3 8.01 9.46 6.29 12 6.29Z"
+      />
+    </svg>
+  );
 }
