@@ -1,781 +1,1091 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { supabase } from "./lib/supabase";
 import "./style.css";
+import { supabase } from "./lib/supabase";
 
-const API_BASE = "";
+/* =========================================================
+   DIN API 3.0.0
+   FULL MEMBER + DOCUMENTATION + API TESTER
+========================================================= */
 
-const API_DATA = [
+const API_BASE =
+  import.meta.env.VITE_API_BASE_URL ||
+  window.location.origin;
+
+/* =========================================================
+   API ENDPOINTS
+========================================================= */
+
+const API_CATEGORIES = [
   {
-    id: "ai",
     name: "AI",
     icon: "✦",
-    description: "Artificial Intelligence & Chat",
+    color: "green",
     endpoints: [
       {
+        name: "AI Aiko",
+        method: "GET",
+        path: "/api/ai/aiko",
+        description: "AI chat assistant",
+        params: [
+          {
+            name: "q",
+            label: "Prompt",
+            placeholder: "Halo",
+            required: true,
+          },
+          {
+            name: "reset",
+            label: "Reset",
+            placeholder: "false",
+            required: false,
+          },
+        ],
+      },
+
+      {
+        name: "AI Lyrics Generator",
+        method: "GET",
+        path: "/api/ai/lyricsgen",
+        description: "Generate lyrics menggunakan AI",
+        params: [
+          {
+            name: "theme",
+            label: "Theme",
+            placeholder: "persahabatan",
+            required: true,
+          },
+          {
+            name: "genre",
+            label: "Genre",
+            placeholder: "pop",
+            required: false,
+          },
+          {
+            name: "emotion",
+            label: "Emotion",
+            placeholder: "happy",
+            required: false,
+          },
+          {
+            name: "lang",
+            label: "Language",
+            placeholder: "Indonesia",
+            required: false,
+          },
+        ],
+      },
+
+      {
+        name: "AI Coder",
+        method: "GET",
+        path: "/api/tools/aicoder",
+        description: "Generate kode menggunakan AI",
+        params: [
+          {
+            name: "prompt",
+            label: "Prompt",
+            placeholder: "buat landing page modern",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "AI4Chat",
+        method: "GET",
+        path: "/api/ai/ai4chat",
+        description: "AI chat generation",
+        params: [
+          {
+            name: "q",
+            label: "Question",
+            placeholder: "Halo",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "ChatGPT",
         method: "POST",
         path: "/api/ai/chatgpt",
-        description: "Chat with AI",
-        body: { message: "Halo, siapa kamu?" },
+        description: "ChatGPT AI assistant",
+        params: [
+          {
+            name: "prompt",
+            label: "Prompt",
+            placeholder: "Jelaskan tentang JavaScript",
+            required: true,
+          },
+        ],
       },
     ],
   },
+
   {
-    id: "download",
-    name: "DOWNLOAD",
-    icon: "♧",
-    description: "Social media downloader",
+    name: "ADMIN",
+    icon: "◇",
+    color: "red",
     endpoints: [
       {
+        name: "Admin Status",
+        method: "GET",
+        path: "/api/admin/status",
+        description: "Check admin status",
+        params: [],
+      },
+      {
+        name: "Admin Info",
+        method: "GET",
+        path: "/api/admin/info",
+        description: "Get admin information",
+        params: [],
+      },
+      {
+        name: "Server Status",
+        method: "GET",
+        path: "/api/admin/server",
+        description: "Check server information",
+        params: [],
+      },
+    ],
+  },
+
+  {
+    name: "CACHE",
+    icon: "▣",
+    color: "cyan",
+    endpoints: [
+      {
+        name: "Cache Get",
+        method: "GET",
+        path: "/api/cache/get",
+        description: "Get cached data",
+        params: [
+          {
+            name: "key",
+            label: "Key",
+            placeholder: "example",
+            required: true,
+          },
+        ],
+      },
+      {
+        name: "Cache Clear",
+        method: "GET",
+        path: "/api/cache/clear",
+        description: "Clear cache",
+        params: [],
+      },
+    ],
+  },
+
+  {
+    name: "DOWNLOAD",
+    icon: "⇩",
+    color: "blue",
+    endpoints: [
+      {
+        name: "TikTok Downloader",
         method: "GET",
         path: "/api/download/tiktok",
         description: "Download video TikTok",
-        query: "url=https://vt.tiktok.com/example",
+        params: [
+          {
+            name: "url",
+            label: "TikTok URL",
+            placeholder: "https://vt.tiktok.com/...",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "Instagram Downloader",
+        method: "GET",
+        path: "/api/download/instagram",
+        description: "Download media Instagram",
+        params: [
+          {
+            name: "url",
+            label: "Instagram URL",
+            placeholder: "https://instagram.com/...",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "CapCut Downloader",
+        method: "GET",
+        path: "/api/download/capcut",
+        description: "Download CapCut",
+        params: [
+          {
+            name: "url",
+            label: "CapCut URL",
+            placeholder: "https://www.capcut.com/...",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "Facebook Downloader",
+        method: "GET",
+        path: "/api/download/facebook",
+        description: "Download Facebook media",
+        params: [
+          {
+            name: "url",
+            label: "Facebook URL",
+            placeholder: "https://facebook.com/...",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "MediaFire Downloader",
+        method: "GET",
+        path: "/api/download/mediafire",
+        description: "Download MediaFire",
+        params: [
+          {
+            name: "url",
+            label: "MediaFire URL",
+            placeholder: "https://mediafire.com/...",
+            required: true,
+          },
+        ],
       },
     ],
   },
+
   {
-    id: "tools",
-    name: "TOOLS",
-    icon: "⌘",
-    description: "Utility & developer tools",
+    name: "FUN",
+    icon: "♣",
+    color: "pink",
     endpoints: [
       {
+        name: "Random Joke",
         method: "GET",
-        path: "/api/tools/domaininfo",
-        description: "Domain information",
-        query: "domain=example.com",
+        path: "/api/fun/joke",
+        description: "Generate random joke",
+        params: [],
       },
       {
-        method: "POST",
-        path: "/api/tools/aicoder",
-        description: "AI coding assistant",
-        body: { prompt: "Buat fungsi JavaScript sederhana" },
+        name: "Truth",
+        method: "GET",
+        path: "/api/fun/truth",
+        description: "Random truth question",
+        params: [],
+      },
+      {
+        name: "Dare",
+        method: "GET",
+        path: "/api/fun/dare",
+        description: "Random dare",
+        params: [],
+      },
+      {
+        name: "Quotes",
+        method: "GET",
+        path: "/api/fun/quotes",
+        description: "Random quotes",
+        params: [],
       },
     ],
   },
+
   {
-    id: "search",
+    name: "LEADERBOARD",
+    icon: "♛",
+    color: "gold",
+    endpoints: [
+      {
+        name: "Leaderboard",
+        method: "GET",
+        path: "/api/leaderboard",
+        description: "Get leaderboard data",
+        params: [],
+      },
+    ],
+  },
+
+  {
+    name: "LIBRARY",
+    icon: "▤",
+    color: "orange",
+    endpoints: [
+      {
+        name: "Library List",
+        method: "GET",
+        path: "/api/library",
+        description: "Get library information",
+        params: [],
+      },
+      {
+        name: "Library Search",
+        method: "GET",
+        path: "/api/library/search",
+        description: "Search library",
+        params: [
+          {
+            name: "q",
+            label: "Search",
+            placeholder: "keyword",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "MAKER",
+    icon: "✣",
+    color: "pink",
+    endpoints: [
+      {
+        name: "Text Maker",
+        method: "GET",
+        path: "/api/maker/text",
+        description: "Create styled text",
+        params: [
+          {
+            name: "text",
+            label: "Text",
+            placeholder: "Hello",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "Sticker Maker",
+        method: "GET",
+        path: "/api/maker/sticker",
+        description: "Create sticker",
+        params: [
+          {
+            name: "url",
+            label: "Image URL",
+            placeholder: "https://...",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "Logo Maker",
+        method: "GET",
+        path: "/api/maker/logo",
+        description: "Generate logo",
+        params: [
+          {
+            name: "text",
+            label: "Text",
+            placeholder: "DIN",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "NEWS",
+    icon: "▥",
+    color: "cyan",
+    endpoints: [
+      {
+        name: "Latest News",
+        method: "GET",
+        path: "/api/news/latest",
+        description: "Get latest news",
+        params: [],
+      },
+
+      {
+        name: "Search News",
+        method: "GET",
+        path: "/api/news/search",
+        description: "Search news",
+        params: [
+          {
+            name: "q",
+            label: "Keyword",
+            placeholder: "teknologi",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "RANDOM",
+    icon: "◆",
+    color: "purple",
+    endpoints: [
+      {
+        name: "Random Image",
+        method: "GET",
+        path: "/api/random/image",
+        description: "Get random image",
+        params: [],
+      },
+
+      {
+        name: "Random Number",
+        method: "GET",
+        path: "/api/random/number",
+        description: "Generate random number",
+        params: [
+          {
+            name: "min",
+            label: "Minimum",
+            placeholder: "1",
+            required: false,
+          },
+          {
+            name: "max",
+            label: "Maximum",
+            placeholder: "100",
+            required: false,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
     name: "SEARCH",
     icon: "⌕",
-    description: "Search utilities",
-    endpoints: [],
+    color: "green",
+    endpoints: [
+      {
+        name: "Web Search",
+        method: "GET",
+        path: "/api/search/web",
+        description: "Search information from web",
+        params: [
+          {
+            name: "q",
+            label: "Query",
+            placeholder: "OpenAI",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "Image Search",
+        method: "GET",
+        path: "/api/search/image",
+        description: "Search images",
+        params: [
+          {
+            name: "q",
+            label: "Query",
+            placeholder: "robot",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "STALK",
+    icon: "◉",
+    color: "purple",
+    endpoints: [
+      {
+        name: "TikTok Stalk",
+        method: "GET",
+        path: "/api/stalk/tiktok",
+        description: "Get public TikTok profile information",
+        params: [
+          {
+            name: "username",
+            label: "Username",
+            placeholder: "username",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "Instagram Stalk",
+        method: "GET",
+        path: "/api/stalk/instagram",
+        description: "Get public Instagram profile information",
+        params: [
+          {
+            name: "username",
+            label: "Username",
+            placeholder: "username",
+            required: true,
+          },
+        ],
+      },
+    ],
+  },
+
+  {
+    name: "TOOLS",
+    icon: "⌘",
+    color: "orange",
+    endpoints: [
+      {
+        name: "Domain Info",
+        method: "GET",
+        path: "/api/tools/domaininfo",
+        description: "Check domain information",
+        params: [
+          {
+            name: "domain",
+            label: "Domain",
+            placeholder: "example.com",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "QR Generator",
+        method: "GET",
+        path: "/api/tools/qr",
+        description: "Generate QR code",
+        params: [
+          {
+            name: "text",
+            label: "Text",
+            placeholder: "Hello World",
+            required: true,
+          },
+        ],
+      },
+
+      {
+        name: "Short URL",
+        method: "GET",
+        path: "/api/tools/shorturl",
+        description: "Shorten URL",
+        params: [
+          {
+            name: "url",
+            label: "URL",
+            placeholder: "https://example.com",
+            required: true,
+          },
+        ],
+      },
+    ],
   },
 ];
 
-function getUserName(user) {
-  return (
-    user?.user_metadata?.full_name ||
-    user?.user_metadata?.name ||
-    user?.email?.split("@")[0] ||
-    "Member"
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getTotalEndpoints() {
+  return API_CATEGORIES.reduce(
+    (total, category) => total + category.endpoints.length,
+    0
   );
 }
 
-function getInitial(user) {
-  return getUserName(user).charAt(0).toUpperCase();
+function RobotIcon() {
+  return (
+    <div className="robot-icon">
+      <span className="robot-eye left" />
+      <span className="robot-eye right" />
+      <span className="robot-mouth" />
+    </div>
+  );
 }
 
-function LoginScreen({ onLogin }) {
+/* =========================================================
+   AUTH PAGE
+========================================================= */
+
+function AuthPage() {
   const [mode, setMode] = useState("login");
+
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [name, setName] = useState("");
+  const [confirmPassword, setConfirmPassword] =
+    useState("");
+
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
 
-  async function submit(e) {
-    e.preventDefault();
+  const resetMessages = () => {
     setMessage("");
+    setError("");
+  };
 
-    if (!email || (!password && mode !== "forgot")) {
-      setMessage("Lengkapi data terlebih dahulu.");
+  const login = async () => {
+    resetMessages();
+
+    if (!email || !password) {
+      setError("Email dan password wajib diisi.");
       return;
     }
 
     setLoading(true);
 
-    try {
-      if (mode === "login") {
-        const { error } = await supabase.auth.signInWithPassword({
-          email,
-          password,
-        });
+    const { error } =
+      await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-        if (error) throw error;
-      }
-
-      if (mode === "register") {
-        const { data, error } = await supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              full_name: name,
-            },
-          },
-        });
-
-        if (error) throw error;
-
-        if (!data.session) {
-          setMessage(
-            "Akun berhasil dibuat. Silakan cek email untuk verifikasi."
-          );
-        }
-      }
-
-      if (mode === "forgot") {
-        const redirectTo = `${window.location.origin}`;
-
-        const { error } = await supabase.auth.resetPasswordForEmail(email, {
-          redirectTo,
-        });
-
-        if (error) throw error;
-
-        setMessage("Link reset password sudah dikirim ke email.");
-      }
-
-      if (mode !== "forgot") {
-        onLogin?.();
-      }
-    } catch (error) {
-      setMessage(error?.message || "Terjadi kesalahan.");
-    } finally {
-      setLoading(false);
+    if (error) {
+      setError(error.message);
     }
-  }
 
-  async function googleLogin() {
-    setMessage("");
+    setLoading(false);
+  };
+
+  const register = async () => {
+    resetMessages();
+
+    if (!email || !password) {
+      setError("Email dan password wajib diisi.");
+      return;
+    }
+
+    if (password.length < 6) {
+      setError(
+        "Password minimal 6 karakter."
+      );
+      return;
+    }
+
+    if (password !== confirmPassword) {
+      setError(
+        "Konfirmasi password tidak sama."
+      );
+      return;
+    }
+
     setLoading(true);
 
-    try {
-      const { error } = await supabase.auth.signInWithOAuth({
+    const {
+      data,
+      error,
+    } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (error) {
+      setError(error.message);
+    } else if (!data.session) {
+      setMessage(
+        "Pendaftaran berhasil. Silakan cek email untuk verifikasi."
+      );
+      setMode("login");
+    }
+
+    setLoading(false);
+  };
+
+  const forgotPassword = async () => {
+    resetMessages();
+
+    if (!email) {
+      setError(
+        "Masukkan email terlebih dahulu."
+      );
+      return;
+    }
+
+    setLoading(true);
+
+    const redirectTo =
+      `${window.location.origin}`;
+
+    const { error } =
+      await supabase.auth.resetPasswordForEmail(
+        email,
+        {
+          redirectTo,
+        }
+      );
+
+    if (error) {
+      setError(error.message);
+    } else {
+      setMessage(
+        "Link reset password sudah dikirim ke email."
+      );
+    }
+
+    setLoading(false);
+  };
+
+  const googleLogin = async () => {
+    resetMessages();
+
+    setLoading(true);
+
+    const { error } =
+      await supabase.auth.signInWithOAuth({
         provider: "google",
         options: {
           redirectTo: window.location.origin,
         },
       });
 
-      if (error) throw error;
-    } catch (error) {
-      setMessage(error?.message || "Login Google gagal.");
+    if (error) {
+      setError(error.message);
       setLoading(false);
     }
-  }
+  };
 
   return (
-    <main className="auth-page">
-      <div className="auth-grid" />
+    <div className="auth-page">
+      <div className="background-grid" />
+      <div className="scanlines" />
 
-      <section className="auth-card">
+      <div className="auth-card">
         <div className="auth-logo">
-          <div className="logo-orb">D</div>
+          <RobotIcon />
         </div>
 
-        <div className="auth-brand">DIN API 🔥</div>
+        <div className="auth-brand">
+          <strong>DIN API🔥</strong>
+          <small>API SYSTEM</small>
+        </div>
 
-        <div className="terminal-status">
+        <div className="auth-status">
           <span />
           SYSTEM ONLINE
         </div>
 
-        <div className="auth-heading">
-          <span>WELCOME TO</span>
-          <h1>DIN API</h1>
-          <p>
-            API platform untuk aplikasi modern dengan akses cepat,
-            sederhana, dan aman.
-          </p>
-        </div>
+        {mode === "login" && (
+          <>
+            <h1>Welcome Back</h1>
 
-        <div className="auth-tabs">
-          <button
-            className={mode === "login" ? "active" : ""}
-            onClick={() => {
-              setMode("login");
-              setMessage("");
-            }}
-          >
-            LOGIN
-          </button>
+            <p className="auth-description">
+              Login untuk mengakses dashboard
+              DIN API.
+            </p>
 
-          <button
-            className={mode === "register" ? "active" : ""}
-            onClick={() => {
-              setMode("register");
-              setMessage("");
-            }}
-          >
-            DAFTAR
-          </button>
-        </div>
-
-        <form onSubmit={submit} className="auth-form">
-          {mode === "register" && (
-            <label>
-              Nama
-              <input
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Nama kamu"
-              />
-            </label>
-          )}
-
-          <label>
-            Email
             <input
               type="email"
+              placeholder="Email"
               value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-              autoComplete="email"
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
             />
-          </label>
 
-          {mode !== "forgot" && (
-            <label>
-              Password
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                autoComplete={
-                  mode === "login" ? "current-password" : "new-password"
-                }
-              />
-            </label>
-          )}
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+            />
 
-          {mode === "login" && (
+            {error && (
+              <div className="auth-error">
+                {error}
+              </div>
+            )}
+
+            {message && (
+              <div className="auth-success">
+                {message}
+              </div>
+            )}
+
             <button
-              type="button"
-              className="forgot-button"
-              onClick={() => {
-                setMode("forgot");
-                setMessage("");
-              }}
+              className="auth-main-button"
+              onClick={login}
+              disabled={loading}
             >
-              Lupa password?
+              {loading
+                ? "PROCESSING..."
+                : "LOGIN"}
             </button>
-          )}
-
-          {message && <div className="auth-message">{message}</div>}
-
-          <button className="primary-button" disabled={loading}>
-            {loading
-              ? "MEMPROSES..."
-              : mode === "login"
-                ? "LOGIN"
-                : mode === "register"
-                  ? "BUAT AKUN"
-                  : "KIRIM RESET PASSWORD"}
-          </button>
-        </form>
-
-        {mode !== "forgot" && (
-          <>
-            <div className="auth-divider">
-              <span>ATAU</span>
-            </div>
 
             <button
               className="google-button"
               onClick={googleLogin}
               disabled={loading}
             >
-              <span className="google-icon">G</span>
-              Lanjut dengan Google
+              <span>G</span>
+              LOGIN WITH GOOGLE
             </button>
+
+            <button
+              className="text-button"
+              onClick={() => {
+                resetMessages();
+                setMode("forgot");
+              }}
+            >
+              LUPA PASSWORD?
+            </button>
+
+            <div className="auth-switch">
+              Belum punya akun?
+              <button
+                onClick={() => {
+                  resetMessages();
+                  setMode("register");
+                }}
+              >
+                DAFTAR
+              </button>
+            </div>
+          </>
+        )}
+
+        {mode === "register" && (
+          <>
+            <h1>Create Account</h1>
+
+            <p className="auth-description">
+              Buat akun member DIN API.
+            </p>
+
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Password"
+              value={password}
+              onChange={(e) =>
+                setPassword(e.target.value)
+              }
+            />
+
+            <input
+              type="password"
+              placeholder="Konfirmasi Password"
+              value={confirmPassword}
+              onChange={(e) =>
+                setConfirmPassword(
+                  e.target.value
+                )
+              }
+            />
+
+            {error && (
+              <div className="auth-error">
+                {error}
+              </div>
+            )}
+
+            {message && (
+              <div className="auth-success">
+                {message}
+              </div>
+            )}
+
+            <button
+              className="auth-main-button"
+              onClick={register}
+              disabled={loading}
+            >
+              {loading
+                ? "CREATING..."
+                : "DAFTAR"}
+            </button>
+
+            <div className="auth-switch">
+              Sudah punya akun?
+              <button
+                onClick={() => {
+                  resetMessages();
+                  setMode("login");
+                }}
+              >
+                LOGIN
+              </button>
+            </div>
           </>
         )}
 
         {mode === "forgot" && (
-          <button
-            className="back-auth"
-            onClick={() => {
-              setMode("login");
-              setMessage("");
-            }}
-          >
-            ← Kembali ke login
-          </button>
-        )}
+          <>
+            <h1>Reset Password</h1>
 
-        <div className="auth-footer">
-          DIN API • Secure API Platform
-        </div>
-      </section>
-    </main>
-  );
-}
+            <p className="auth-description">
+              Masukkan email untuk mendapatkan
+              link reset password.
+            </p>
 
-function Sidebar({ open, close, user, active, setActive, logout }) {
-  const items = [
-    ["home", "⌂", "HOME"],
-    ["ai", "✦", "AI"],
-    ["download", "♧", "DOWNLOAD"],
-    ["tools", "⌘", "TOOLS"],
-    ["search", "⌕", "SEARCH"],
-    ["docs", "▤", "DOCUMENTATION"],
-    ["tester", "◉", "API TESTER"],
-    ["profile", "◎", "PROFILE"],
-  ];
+            <input
+              type="email"
+              placeholder="Email"
+              value={email}
+              onChange={(e) =>
+                setEmail(e.target.value)
+              }
+            />
 
-  return (
-    <>
-      <div
-        className={`sidebar-overlay ${open ? "show" : ""}`}
-        onClick={close}
-      />
+            {error && (
+              <div className="auth-error">
+                {error}
+              </div>
+            )}
 
-      <aside className={`sidebar ${open ? "open" : ""}`}>
-        <div className="sidebar-top">
-          <div>
-            <span className="mini-label">NAVIGATION</span>
-            <strong>DIN API</strong>
-          </div>
+            {message && (
+              <div className="auth-success">
+                {message}
+              </div>
+            )}
 
-          <button className="close-sidebar" onClick={close}>
-            ×
-          </button>
-        </div>
-
-        <div className="sidebar-user">
-          <div className="avatar">{getInitial(user)}</div>
-          <div>
-            <strong>{getUserName(user)}</strong>
-            <span>MEMBER</span>
-          </div>
-        </div>
-
-        <nav>
-          {items.map(([id, icon, title], index) => (
             <button
-              key={id}
-              className={`side-item ${active === id ? "active" : ""}`}
-              onClick={() => {
-                setActive(id);
-                close();
-              }}
+              className="auth-main-button"
+              onClick={forgotPassword}
+              disabled={loading}
             >
-              <span className="side-icon">{icon}</span>
-              <span>{title}</span>
-              <small>{String(index).padStart(2, "0")}</small>
+              {loading
+                ? "SENDING..."
+                : "KIRIM LINK RESET"}
             </button>
-          ))}
-        </nav>
 
-        <div className="sidebar-bottom">
-          <button className="logout-side" onClick={logout}>
-            ↪ LOGOUT
-          </button>
-        </div>
-      </aside>
-    </>
-  );
-}
-
-function Header({ openSidebar, user, logout }) {
-  return (
-    <header className="app-header">
-      <button className="menu-button" onClick={openSidebar}>
-        <span />
-        <span />
-        <span />
-      </button>
-
-      <div className="header-brand">
-        <div className="header-logo">◉</div>
-        <strong>DIN API🔥</strong>
-      </div>
-
-      <div className="header-right">
-        <div className="online-pill">
-          <span />
-          ONLINE
-        </div>
-
-        <button className="header-avatar" onClick={logout}>
-          {getInitial(user)}
-        </button>
-      </div>
-    </header>
-  );
-}
-
-function Home({ user, setActive }) {
-  const totalEndpoints = API_DATA.reduce(
-    (total, category) => total + category.endpoints.length,
-    0
-  );
-
-  const categories = API_DATA.length + 9;
-
-  return (
-    <>
-      <section className="hero-card">
-        <div className="hero-inner">
-          <div className="terminal-badge">
-            <span />
-            TERMINAL ACTIVE
-          </div>
-
-          <div className="hero-content">
-            <div className="hero-copy">
-              <div className="docs-title">
-                DOCS <small>v3.0.0</small>
-              </div>
-
-              <p>
-                A comprehensive and user friendly API solution for modern
-                applications.
-              </p>
-            </div>
-
-            <div className="robot-decoration">
-              <div className="robot-eye left" />
-              <div className="robot-eye right" />
-              <div className="robot-mouth" />
-            </div>
-          </div>
-
-          <div className="stats-grid">
-            <div className="stat-card">
-              <span>CATEGORIES</span>
-              <strong>{categories}</strong>
-            </div>
-
-            <div className="stat-card green">
-              <span>ENDPOINTS</span>
-              <strong>{35 || totalEndpoints}</strong>
-            </div>
-
-            <div className="stat-card wide">
-              <span>STATUS</span>
-              <strong>ONLINE</strong>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section className="welcome-strip">
-        <div>
-          <span>WELCOME BACK</span>
-          <strong>{getUserName(user)}</strong>
-        </div>
-
-        <button onClick={() => setActive("tester")}>OPEN API TESTER →</button>
-      </section>
-
-      <CategoryList setActive={setActive} />
-    </>
-  );
-}
-
-function CategoryList({ setActive }) {
-  const [search, setSearch] = useState("");
-
-  const filtered = useMemo(() => {
-    const value = search.toLowerCase().trim();
-
-    if (!value) return API_DATA;
-
-    return API_DATA.filter(
-      (category) =>
-        category.name.toLowerCase().includes(value) ||
-        category.description.toLowerCase().includes(value) ||
-        category.endpoints.some((endpoint) =>
-          endpoint.path.toLowerCase().includes(value)
-        )
-    );
-  }, [search]);
-
-  return (
-    <>
-      <div className="search-box">
-        <span>⌕</span>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="SEARCH ENDPOINT / CATEGORY..."
-        />
-      </div>
-
-      <section className="category-section">
-        {filtered.map((category, index) => (
-          <article
-            className="category-card"
-            key={category.id}
-            onClick={() => setActive(category.id)}
-          >
-            <div className="category-left">
-              <div className="category-icon">{category.icon}</div>
-
-              <div>
-                <span className="module">
-                  MODULE {String(index + 1).padStart(2, "0")}
-                </span>
-                <h3>{category.name}</h3>
-                <p>
-                  {category.endpoints.length || 0} ENDPOINTS
-                </p>
-              </div>
-            </div>
-
-            <div className="category-arrow">→</div>
-          </article>
-        ))}
-      </section>
-    </>
-  );
-}
-
-function EndpointPage({ category, setActive }) {
-  if (!category) {
-    return <Home setActive={setActive} />;
-  }
-
-  const [selected, setSelected] = useState(category.endpoints[0] || null);
-
-  return (
-    <section className="endpoint-page">
-      <button className="back-button" onClick={() => setActive("home")}>
-        ← BACK TO HOME
-      </button>
-
-      <div className="page-heading">
-        <span>MODULE</span>
-        <h1>{category.icon} {category.name}</h1>
-        <p>{category.description}</p>
-      </div>
-
-      {category.endpoints.length === 0 ? (
-        <div className="empty-card">
-          <strong>NO ENDPOINT AVAILABLE</strong>
-          <p>Endpoint untuk kategori ini belum ditambahkan.</p>
-        </div>
-      ) : (
-        <div className="endpoint-layout">
-          <div className="endpoint-list">
-            {category.endpoints.map((endpoint) => (
+            <div className="auth-switch">
+              Ingat password?
               <button
-                key={endpoint.path}
-                className={`endpoint-item ${
-                  selected?.path === endpoint.path ? "active" : ""
-                }`}
-                onClick={() => setSelected(endpoint)}
+                onClick={() => {
+                  resetMessages();
+                  setMode("login");
+                }}
               >
-                <span className={`method ${endpoint.method.toLowerCase()}`}>
-                  {endpoint.method}
-                </span>
-                <code>{endpoint.path}</code>
+                LOGIN
               </button>
-            ))}
-          </div>
-
-          {selected && <EndpointDetail endpoint={selected} />}
-        </div>
-      )}
-    </section>
-  );
-}
-
-function EndpointDetail({ endpoint }) {
-  const [url, setUrl] = useState("");
-  const [result, setResult] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  function buildUrl() {
-    let target = `${API_BASE}${endpoint.path}`;
-
-    if (endpoint.method === "GET" && endpoint.query) {
-      target += `?${endpoint.query}`;
-    }
-
-    if (url.trim()) {
-      target =
-        endpoint.method === "GET"
-          ? `${API_BASE}${endpoint.path}?url=${encodeURIComponent(url)}`
-          : target;
-    }
-
-    return target;
-  }
-
-  async function testEndpoint() {
-    setLoading(true);
-    setResult(null);
-
-    try {
-      const target = buildUrl();
-
-      const options = {
-        method: endpoint.method,
-        headers: {
-          Accept: "application/json",
-          "Content-Type": "application/json",
-        },
-      };
-
-      if (endpoint.method === "POST") {
-        options.body = JSON.stringify(
-          endpoint.body || {
-            message: url || "Halo",
-          }
-        );
-      }
-
-      const response = await fetch(target, options);
-      const text = await response.text();
-
-      let data;
-
-      try {
-        data = JSON.parse(text);
-      } catch {
-        data = text;
-      }
-
-      setResult({
-        status: response.status,
-        data,
-      });
-    } catch (error) {
-      setResult({
-        status: "ERROR",
-        data: error.message,
-      });
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  return (
-    <div className="endpoint-detail">
-      <div className="detail-header">
-        <span className={`method ${endpoint.method.toLowerCase()}`}>
-          {endpoint.method}
-        </span>
-
-        <code>{endpoint.path}</code>
+            </div>
+          </>
+        )}
       </div>
-
-      <p className="endpoint-description">{endpoint.description}</p>
-
-      <label className="tester-label">
-        {endpoint.method === "GET" ? "URL / INPUT" : "MESSAGE / INPUT"}
-      </label>
-
-      <input
-        className="tester-input"
-        value={url}
-        onChange={(e) => setUrl(e.target.value)}
-        placeholder={
-          endpoint.method === "GET"
-            ? "Masukkan URL..."
-            : "Masukkan pesan..."
-        }
-      />
-
-      <button className="test-button" onClick={testEndpoint}>
-        {loading ? "PROCESSING..." : "TEST ENDPOINT →"}
-      </button>
-
-      {result && (
-        <div className="response-box">
-          <div className="response-title">
-            RESPONSE <span>{result.status}</span>
-          </div>
-
-          <pre>
-            {typeof result.data === "string"
-              ? result.data
-              : JSON.stringify(result.data, null, 2)}
-          </pre>
-        </div>
-      )}
     </div>
   );
 }
 
-function Documentation() {
+/* =========================================================
+   LOADING
+========================================================= */
+
+function LoadingPage() {
   return (
-    <section className="generic-page">
-      <span className="page-eyebrow">DOCUMENTATION</span>
-      <h1>API Documentation</h1>
-      <p>
-        Dokumentasi endpoint DIN API tersedia di sini. Gunakan API tester
-        untuk mencoba endpoint secara langsung.
-      </p>
+    <div className="loading-page">
+      <div className="loading-box">
+        <RobotIcon />
 
-      <div className="doc-card">
-        <span>BASE URL</span>
-        <code>{window.location.origin}</code>
-      </div>
+        <h2>DIN API🔥</h2>
 
-      <div className="doc-card">
-        <span>AVAILABLE ENDPOINTS</span>
-        <code>/api/download/tiktok</code>
-        <code>/api/ai/chatgpt</code>
-      </div>
-    </section>
-  );
-}
-
-function Profile({ user, logout }) {
-  return (
-    <section className="generic-page">
-      <span className="page-eyebrow">ACCOUNT</span>
-      <h1>Profile</h1>
-
-      <div className="profile-card">
-        <div className="profile-avatar">{getInitial(user)}</div>
-
-        <div className="profile-info">
-          <span>NAME</span>
-          <strong>{getUserName(user)}</strong>
-
-          <span>EMAIL</span>
-          <strong>{user?.email || "-"}</strong>
-
-          <span>ROLE</span>
-          <strong>MEMBER</strong>
+        <div className="loading-dot">
+          CONNECTING...
         </div>
       </div>
-
-      <button className="danger-button" onClick={logout}>
-        LOGOUT ACCOUNT
-      </button>
-    </section>
+    </div>
   );
 }
 
-function App() {
+/* =========================================================
+   MAIN APP
+========================================================= */
+
+export default function App() {
   const [user, setUser] = useState(null);
-  const [loadingAuth, setLoadingAuth] = useState(true);
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [active, setActive] = useState("home");
+  const [profile, setProfile] = useState(null);
+
+  const [authLoading, setAuthLoading] =
+    useState(true);
+
+  const [menuOpen, setMenuOpen] =
+    useState(false);
+
+  const [search, setSearch] =
+    useState("");
+
+  const [activePage, setActivePage] =
+    useState("home");
+
+  const [selectedEndpoint, setSelectedEndpoint] =
+    useState(null);
+
+  const [testerOpen, setTesterOpen] =
+    useState(false);
+
+  const [testerValues, setTesterValues] =
+    useState({});
+
+  const [testLoading, setTestLoading] =
+    useState(false);
+
+  const [testResponse, setTestResponse] =
+    useState(null);
+
+  const [copied, setCopied] =
+    useState(false);
+
+  /* =======================================================
+     AUTH SESSION
+  ======================================================= */
 
   useEffect(() => {
     let mounted = true;
 
-    supabase.auth.getSession().then(({ data }) => {
-      if (mounted) {
-        setUser(data?.session?.user || null);
-        setLoadingAuth(false);
+    async function initialize() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      if (!mounted) return;
+
+      if (session?.user) {
+        setUser(session.user);
+        await loadProfile(
+          session.user.id
+        );
       }
-    });
+
+      setAuthLoading(false);
+    }
+
+    initialize();
 
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user || null);
-      setLoadingAuth(false);
-    });
+    } =
+      supabase.auth.onAuthStateChange(
+        async (_event, session) => {
+          if (!mounted) return;
+
+          setUser(
+            session?.user || null
+          );
+
+          if (session?.user) {
+            await loadProfile(
+              session.user.id
+            );
+          } else {
+            setProfile(null);
+          }
+        }
+      );
 
     return () => {
       mounted = false;
@@ -783,98 +1093,1190 @@ function App() {
     };
   }, []);
 
-  async function logout() {
-    await supabase.auth.signOut();
-    setUser(null);
-    setActive("home");
-    setSidebarOpen(false);
+  /* =======================================================
+     PROFILE
+  ======================================================= */
+
+  async function loadProfile(userId) {
+    const {
+      data,
+      error,
+    } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", userId)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "PROFILE ERROR:",
+        error
+      );
+      return;
+    }
+
+    if (data) {
+      setProfile(data);
+    }
   }
 
-  if (loadingAuth) {
-    return (
-      <div className="loading-screen">
-        <div className="loading-logo">D</div>
-        <div className="loading-text">CONNECTING TO DIN API...</div>
-        <div className="loading-line">
-          <span />
-        </div>
-      </div>
+  /* =======================================================
+     LOGOUT
+  ======================================================= */
+
+  async function logout() {
+    await supabase.auth.signOut();
+
+    setUser(null);
+    setProfile(null);
+    setActivePage("home");
+  }
+
+  /* =======================================================
+     DATA
+  ======================================================= */
+
+  const totalEndpoints =
+    getTotalEndpoints();
+
+  const filteredCategories =
+    useMemo(() => {
+      const keyword =
+        search
+          .trim()
+          .toLowerCase();
+
+      if (!keyword) {
+        return API_CATEGORIES;
+      }
+
+      return API_CATEGORIES
+        .map((category) => {
+          const categoryMatch =
+            category.name
+              .toLowerCase()
+              .includes(keyword);
+
+          const endpoints =
+            category.endpoints.filter(
+              (endpoint) =>
+                endpoint.name
+                  .toLowerCase()
+                  .includes(keyword) ||
+                endpoint.path
+                  .toLowerCase()
+                  .includes(keyword) ||
+                endpoint.description
+                  .toLowerCase()
+                  .includes(keyword)
+            );
+
+          if (categoryMatch) {
+            return category;
+          }
+
+          if (endpoints.length) {
+            return {
+              ...category,
+              endpoints,
+            };
+          }
+
+          return null;
+        })
+        .filter(Boolean);
+    }, [search]);
+
+  /* =======================================================
+     NAVIGATION
+  ======================================================= */
+
+  function scrollHome() {
+    setMenuOpen(false);
+    setActivePage("home");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  function scrollCategory(name) {
+    setMenuOpen(false);
+    setActivePage("docs");
+
+    setTimeout(() => {
+      const element =
+        document.getElementById(
+          `category-${name.toLowerCase()}`
+        );
+
+      if (element) {
+        element.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }
+    }, 100);
+  }
+
+  /* =======================================================
+     TESTER
+  ======================================================= */
+
+  function openTester(endpoint) {
+    setSelectedEndpoint(endpoint);
+
+    const initial = {};
+
+    endpoint.params.forEach(
+      (param) => {
+        initial[param.name] = "";
+      }
     );
+
+    setTesterValues(initial);
+    setTestResponse(null);
+    setTesterOpen(true);
+  }
+
+  function closeTester() {
+    setTesterOpen(false);
+    setSelectedEndpoint(null);
+    setTestResponse(null);
+  }
+
+  async function executeTest() {
+    if (!selectedEndpoint) return;
+
+    setTestLoading(true);
+    setTestResponse(null);
+
+    try {
+      const values = {
+        ...testerValues,
+      };
+
+      const missing =
+        selectedEndpoint.params.find(
+          (param) =>
+            param.required &&
+            !String(
+              values[param.name] || ""
+            ).trim()
+        );
+
+      if (missing) {
+        setTestResponse({
+          error: true,
+          message:
+            `${missing.label || missing.name} wajib diisi.`,
+        });
+
+        setTestLoading(false);
+        return;
+      }
+
+      let url =
+        `${API_BASE}${selectedEndpoint.path}`;
+
+      const headers = {
+        Accept:
+          "application/json",
+      };
+
+      if (profile?.api_key) {
+        headers[
+          "x-api-key"
+        ] = profile.api_key;
+
+        headers[
+          "Authorization"
+        ] =
+          `Bearer ${profile.api_key}`;
+      }
+
+      const method =
+        selectedEndpoint.method
+          .toUpperCase();
+
+      let options = {
+        method,
+        headers,
+      };
+
+      if (method === "GET") {
+        const query =
+          new URLSearchParams();
+
+        Object.entries(values).forEach(
+          ([key, value]) => {
+            if (
+              value !== undefined &&
+              String(value).trim() !== ""
+            ) {
+              query.append(
+                key,
+                value
+              );
+            }
+          }
+        );
+
+        const queryString =
+          query.toString();
+
+        if (queryString) {
+          url += `?${queryString}`;
+        }
+      } else {
+        headers[
+          "Content-Type"
+        ] =
+          "application/json";
+
+        options.body =
+          JSON.stringify(values);
+      }
+
+      const response =
+        await fetch(
+          url,
+          options
+        );
+
+      const text =
+        await response.text();
+
+      let data;
+
+      try {
+        data =
+          JSON.parse(text);
+      } catch {
+        data = text;
+      }
+
+      setTestResponse({
+        status:
+          response.status,
+        ok: response.ok,
+        data,
+      });
+    } catch (error) {
+      setTestResponse({
+        error: true,
+        message:
+          error.message ||
+          "Request gagal.",
+      });
+    }
+
+    setTestLoading(false);
+  }
+
+  /* =======================================================
+     COPY KEY
+  ======================================================= */
+
+  async function copyApiKey() {
+    if (!profile?.api_key) return;
+
+    try {
+      await navigator.clipboard.writeText(
+        profile.api_key
+      );
+
+      setCopied(true);
+
+      setTimeout(
+        () => setCopied(false),
+        2000
+      );
+    } catch {
+      alert(
+        "Gagal menyalin API key."
+      );
+    }
+  }
+
+  /* =======================================================
+     AUTH CHECK
+  ======================================================= */
+
+  if (authLoading) {
+    return <LoadingPage />;
   }
 
   if (!user) {
-    return <LoginScreen onLogin={() => {}} />;
+    return <AuthPage />;
   }
 
-  const selectedCategory = API_DATA.find(
-    (category) => category.id === active
-  );
+  /* =======================================================
+     DASHBOARD
+  ======================================================= */
 
   return (
-    <div className="app-shell">
+    <div className="app">
       <div className="background-grid" />
+      <div className="scanlines" />
 
-      <Sidebar
-        open={sidebarOpen}
-        close={() => setSidebarOpen(false)}
-        user={user}
-        active={active}
-        setActive={setActive}
-        logout={logout}
+      <div className="ambient ambient-one" />
+      <div className="ambient ambient-two" />
+
+      {/* ===================================================
+          HEADER
+      =================================================== */}
+
+      <header className="header">
+        <div className="header-left">
+          <button
+            className={`menu-button ${
+              menuOpen
+                ? "active"
+                : ""
+            }`}
+            onClick={() =>
+              setMenuOpen(true)
+            }
+          >
+            <span />
+            <span />
+            <span />
+          </button>
+
+          <div className="header-brand">
+            <RobotIcon />
+
+            <div>
+              <strong>
+                DIN API🔥
+              </strong>
+
+              <small>
+                ROBOT SYSTEM
+              </small>
+            </div>
+          </div>
+        </div>
+
+        <div className="header-right">
+          <div className="connection">
+            <span />
+            ONLINE
+          </div>
+
+          <div className="version">
+            v3.0.0
+          </div>
+        </div>
+      </header>
+
+      {/* ===================================================
+          OVERLAY
+      =================================================== */}
+
+      <div
+        className={`nav-overlay ${
+          menuOpen ? "show" : ""
+        }`}
+        onClick={() =>
+          setMenuOpen(false)
+        }
       />
 
-      <Header
-        openSidebar={() => setSidebarOpen(true)}
-        user={user}
-        logout={logout}
-      />
+      {/* ===================================================
+          SIDEBAR
+      =================================================== */}
 
-      <main className="main-content">
-        {active === "home" && (
-          <Home user={user} setActive={setActive} />
-        )}
+      <aside
+        className={`side-nav ${
+          menuOpen ? "open" : ""
+        }`}
+      >
+        <div className="side-top">
+          <div>
+            <small>
+              NAVIGATION
+            </small>
 
-        {["ai", "download", "tools", "search"].includes(active) && (
-          <EndpointPage
-            category={selectedCategory}
-            setActive={setActive}
-          />
-        )}
+            <h2>
+              DIN API🔥
+            </h2>
+          </div>
 
-        {active === "docs" && <Documentation />}
+          <button
+            className="close-button"
+            onClick={() =>
+              setMenuOpen(false)
+            }
+          >
+            ×
+          </button>
+        </div>
 
-        {active === "tester" && (
-          <section className="generic-page">
-            <span className="page-eyebrow">DEVELOPER</span>
-            <h1>API Tester</h1>
-            <p>
-              Pilih endpoint dari menu API untuk melakukan pengujian.
-            </p>
+        <div className="side-line" />
 
-            <div className="tester-shortcuts">
-              <button onClick={() => setActive("download")}>
-                TEST TIKTOK →
+        <nav className="nav-list">
+          <button
+            className="nav-item home"
+            onClick={scrollHome}
+          >
+            <span className="nav-icon">
+              ⌂
+            </span>
+
+            <b>HOME</b>
+
+            <small>
+              00
+            </small>
+          </button>
+
+          <button
+            className="nav-item"
+            onClick={() => {
+              setMenuOpen(false);
+              setActivePage(
+                "dashboard"
+              );
+            }}
+          >
+            <span className="nav-icon green">
+              ◉
+            </span>
+
+            <b>DASHBOARD</b>
+
+            <small>
+              01
+            </small>
+          </button>
+
+          {API_CATEGORIES.map(
+            (category, index) => (
+              <button
+                key={
+                  category.name
+                }
+                className="nav-item"
+                onClick={() =>
+                  scrollCategory(
+                    category.name
+                  )
+                }
+              >
+                <span
+                  className={`nav-icon ${category.color}`}
+                >
+                  {
+                    category.icon
+                  }
+                </span>
+
+                <b>
+                  {
+                    category.name
+                  }
+                </b>
+
+                <small>
+                  {String(
+                    index + 2
+                  ).padStart(
+                    2,
+                    "0"
+                  )}
+                </small>
               </button>
+            )
+          )}
 
-              <button onClick={() => setActive("ai")}>
-                TEST CHATGPT →
-              </button>
+          <button
+            className="nav-item"
+            onClick={() => {
+              setMenuOpen(false);
+              setActivePage(
+                "profile"
+              );
+            }}
+          >
+            <span className="nav-icon">
+              ◎
+            </span>
+
+            <b>PROFILE</b>
+
+            <small>
+              99
+            </small>
+          </button>
+
+          <button
+            className="nav-item logout-nav"
+            onClick={logout}
+          >
+            <span className="nav-icon red">
+              ⇥
+            </span>
+
+            <b>LOGOUT</b>
+
+            <small>
+              ↪
+            </small>
+          </button>
+        </nav>
+
+        <div className="side-footer">
+          <span>
+            SYSTEM STATUS
+          </span>
+
+          <strong>
+            ● OPERATIONAL
+          </strong>
+        </div>
+      </aside>
+
+      {/* ===================================================
+          MAIN
+      =================================================== */}
+
+      <main className="main">
+        {/* =================================================
+            DASHBOARD
+        ================================================= */}
+
+        {activePage ===
+          "dashboard" && (
+          <section className="member-dashboard">
+            <div className="dashboard-header">
+              <div>
+                <span>
+                  MEMBER PANEL
+                </span>
+
+                <h1>
+                  Dashboard
+                </h1>
+
+                <p>
+                  Selamat datang kembali,
+                  {user.email}
+                </p>
+              </div>
+
+              <div className="role-badge">
+                {(
+                  profile?.role ||
+                  "MEMBER"
+                ).toUpperCase()}
+              </div>
+            </div>
+
+            <div className="dashboard-grid">
+              <div className="dashboard-card">
+                <span>
+                  ACCOUNT
+                </span>
+
+                <strong>
+                  ACTIVE
+                </strong>
+              </div>
+
+              <div className="dashboard-card">
+                <span>
+                  ENDPOINTS
+                </span>
+
+                <strong>
+                  {totalEndpoints}
+                </strong>
+              </div>
+
+              <div className="dashboard-card">
+                <span>
+                  REQUESTS
+                </span>
+
+                <strong>
+                  {profile?.requests ??
+                    0}
+                </strong>
+              </div>
+
+              <div className="dashboard-card">
+                <span>
+                  PLAN
+                </span>
+
+                <strong>
+                  {profile?.plan ||
+                    "FREE"}
+                </strong>
+              </div>
+            </div>
+
+            <div className="api-key-card">
+              <div>
+                <span>
+                  API KEY
+                </span>
+
+                <h2>
+                  Your API Access Key
+                </h2>
+
+                <p>
+                  Gunakan API key ini
+                  untuk mengakses API
+                  DIN API.
+                </p>
+              </div>
+
+              <div className="api-key-box">
+                <code>
+                  {profile?.api_key ||
+                    "API KEY BELUM TERSEDIA"}
+                </code>
+
+                <button
+                  onClick={
+                    copyApiKey
+                  }
+                >
+                  {copied
+                    ? "COPIED"
+                    : "COPY"}
+                </button>
+              </div>
             </div>
           </section>
         )}
 
-        {active === "profile" && (
-          <Profile user={user} logout={logout} />
+        {/* =================================================
+            PROFILE
+        ================================================= */}
+
+        {activePage ===
+          "profile" && (
+          <section className="member-dashboard">
+            <div className="dashboard-header">
+              <div>
+                <span>
+                  ACCOUNT
+                </span>
+
+                <h1>
+                  Profile
+                </h1>
+              </div>
+            </div>
+
+            <div className="profile-card">
+              <div className="profile-avatar">
+                {(
+                  user.email ||
+                  "U"
+                )
+                  .charAt(0)
+                  .toUpperCase()}
+              </div>
+
+              <div className="profile-info">
+                <span>
+                  EMAIL
+                </span>
+
+                <strong>
+                  {user.email}
+                </strong>
+
+                <span>
+                  ROLE
+                </span>
+
+                <strong>
+                  {(
+                    profile?.role ||
+                    "MEMBER"
+                  ).toUpperCase()}
+                </strong>
+
+                <span>
+                  STATUS
+                </span>
+
+                <strong>
+                  {profile?.status ||
+                    "ACTIVE"}
+                </strong>
+              </div>
+            </div>
+
+            <button
+              className="danger-button"
+              onClick={logout}
+            >
+              LOGOUT
+            </button>
+          </section>
+        )}
+
+        {/* =================================================
+            HOME / DOCS
+        ================================================= */}
+
+        {(activePage ===
+          "home" ||
+          activePage ===
+            "docs") && (
+          <>
+            {/* HERO */}
+
+            <section className="hero">
+              <div className="hero-robot-decoration">
+                <div className="robot-head">
+                  <div className="robot-eye left" />
+                  <div className="robot-eye right" />
+                  <div className="robot-mouth" />
+                </div>
+              </div>
+
+              <div className="hero-content">
+                <div className="terminal">
+                  <span className="terminal-light" />
+
+                  TERMINAL ACTIVE
+
+                  <span className="terminal-lines">
+                    /// SYSTEM READY
+                  </span>
+                </div>
+
+                <div className="hero-title">
+                  <h1>
+                    DOCS
+                  </h1>
+
+                  <span>
+                    v3.0.0
+                  </span>
+                </div>
+
+                <p>
+                  A comprehensive and
+                  user friendly API
+                  solution for modern
+                  applications.
+                </p>
+
+                <div className="hero-system">
+                  <div className="system-item">
+                    <span>
+                      CATEGORIES
+                    </span>
+
+                    <strong>
+                      {
+                        API_CATEGORIES.length
+                      }
+                    </strong>
+                  </div>
+
+                  <div className="system-item active">
+                    <span>
+                      ENDPOINTS
+                    </span>
+
+                    <strong>
+                      {
+                        totalEndpoints
+                      }
+                    </strong>
+                  </div>
+
+                  <div className="system-item">
+                    <span>
+                      STATUS
+                    </span>
+
+                    <strong>
+                      ONLINE
+                    </strong>
+                  </div>
+                </div>
+              </div>
+            </section>
+
+            {/* MEMBER INFO */}
+
+            <section className="member-mini-card">
+              <div>
+                <span>
+                  MEMBER
+                </span>
+
+                <strong>
+                  {user.email}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  ROLE
+                </span>
+
+                <strong>
+                  {(
+                    profile?.role ||
+                    "MEMBER"
+                  ).toUpperCase()}
+                </strong>
+              </div>
+
+              <div>
+                <span>
+                  API KEY
+                </span>
+
+                <button
+                  onClick={
+                    copyApiKey
+                  }
+                >
+                  {copied
+                    ? "COPIED"
+                    : "COPY KEY"}
+                </button>
+              </div>
+            </section>
+
+            {/* SEARCH */}
+
+            <section className="search-section">
+              <div className="search-box">
+                <span>
+                  ⌕
+                </span>
+
+                <input
+                  value={search}
+                  onChange={(e) =>
+                    setSearch(
+                      e.target.value
+                    )
+                  }
+                  placeholder="SEARCH ENDPOINT / CATEGORY..."
+                />
+
+                {search && (
+                  <button
+                    onClick={() =>
+                      setSearch(
+                        ""
+                      )
+                    }
+                  >
+                    ×
+                  </button>
+                )}
+              </div>
+            </section>
+
+            {/* CATEGORIES */}
+
+            <section className="categories">
+              {filteredCategories.map(
+                (category) => (
+                  <section
+                    key={
+                      category.name
+                    }
+                    id={`category-${category.name.toLowerCase()}`}
+                    className={`category-section category-${category.color}`}
+                  >
+                    <div className="category-header">
+                      <div className="category-icon">
+                        {
+                          category.icon
+                        }
+                      </div>
+
+                      <div>
+                        <span>
+                          MODULE
+                        </span>
+
+                        <h2>
+                          {
+                            category.name
+                          }
+                        </h2>
+
+                        <small>
+                          {
+                            category
+                              .endpoints
+                              .length
+                          }{" "}
+                          ENDPOINTS
+                        </small>
+                      </div>
+                    </div>
+
+                    <div className="endpoint-list">
+                      {category.endpoints.map(
+                        (
+                          endpoint
+                        ) => (
+                          <div
+                            className="endpoint-card"
+                            key={
+                              endpoint.path
+                            }
+                          >
+                            <div className="endpoint-info">
+                              <div className="method">
+                                {
+                                  endpoint.method
+                                }
+                              </div>
+
+                              <div>
+                                <strong>
+                                  {
+                                    endpoint.name
+                                  }
+                                </strong>
+
+                                <code>
+                                  {
+                                    endpoint.path
+                                  }
+                                </code>
+
+                                <p>
+                                  {
+                                    endpoint.description
+                                  }
+                                </p>
+                              </div>
+                            </div>
+
+                            <button
+                              className="test-button"
+                              onClick={() =>
+                                openTester(
+                                  endpoint
+                                )
+                              }
+                            >
+                              TEST
+                            </button>
+                          </div>
+                        )
+                      )}
+                    </div>
+                  </section>
+                )
+              )}
+            </section>
+
+            {filteredCategories.length ===
+              0 && (
+              <div className="empty-state">
+                <h2>
+                  ENDPOINT NOT FOUND
+                </h2>
+
+                <p>
+                  Tidak ada endpoint
+                  yang cocok dengan
+                  pencarian.
+                </p>
+              </div>
+            )}
+          </>
         )}
       </main>
 
-      <footer className="app-footer">
-        <span>DIN API</span>
-        <span>v3.0.0</span>
-        <span>SYSTEM ONLINE</span>
-      </footer>
+      {/* ===================================================
+          API TESTER MODAL
+      =================================================== */}
+
+      {testerOpen &&
+        selectedEndpoint && (
+          <div
+            className="tester-overlay"
+            onClick={closeTester}
+          >
+            <div
+              className="tester-modal"
+              onClick={(e) =>
+                e.stopPropagation()
+              }
+            >
+              <div className="tester-header">
+                <div>
+                  <span>
+                    API TESTER
+                  </span>
+
+                  <h2>
+                    {
+                      selectedEndpoint.name
+                    }
+                  </h2>
+                </div>
+
+                <button
+                  onClick={
+                    closeTester
+                  }
+                >
+                  ×
+                </button>
+              </div>
+
+              <div className="tester-endpoint">
+                <span
+                  className={`method ${selectedEndpoint.method}`}
+                >
+                  {
+                    selectedEndpoint.method
+                  }
+                </span>
+
+                <code>
+                  {
+                    selectedEndpoint.path
+                  }
+                </code>
+              </div>
+
+              {selectedEndpoint
+                .params.length >
+                0 && (
+                <div className="tester-fields">
+                  {selectedEndpoint.params.map(
+                    (param) => (
+                      <div
+                        className="tester-field"
+                        key={
+                          param.name
+                        }
+                      >
+                        <label>
+                          {
+                            param.label
+                          }
+
+                          {param.required && (
+                            <b>
+                              *
+                            </b>
+                          )}
+                        </label>
+
+                        <input
+                          value={
+                            testerValues[
+                              param.name
+                            ] || ""
+                          }
+                          placeholder={
+                            param.placeholder
+                          }
+                          onChange={(
+                            e
+                          ) =>
+                            setTesterValues(
+                              (
+                                old
+                              ) => ({
+                                ...old,
+                                [param.name]:
+                                  e
+                                    .target
+                                    .value,
+                              })
+                            )
+                          }
+                        />
+                      </div>
+                    )
+                  )}
+                </div>
+              )}
+
+              <div className="tester-key">
+                <span>
+                  API KEY
+                </span>
+
+                <code>
+                  {profile?.api_key ||
+                    "NOT AVAILABLE"}
+                </code>
+              </div>
+
+              <button
+                className="execute-button"
+                onClick={
+                  executeTest
+                }
+                disabled={
+                  testLoading
+                }
+              >
+                {testLoading
+                  ? "REQUESTING..."
+                  : "EXECUTE REQUEST"}
+              </button>
+
+              {testResponse && (
+                <div className="response-box">
+                  <div className="response-header">
+                    <span>
+                      RESPONSE
+                    </span>
+
+                    {!testResponse.error && (
+                      <b
+                        className={
+                          testResponse.ok
+                            ? "success"
+                            : "failed"
+                        }
+                      >
+                        HTTP{" "}
+                        {
+                          testResponse.status
+                        }
+                      </b>
+                    )}
+                  </div>
+
+                  <pre>
+                    {testResponse.error
+                      ? testResponse.message
+                      : typeof testResponse.data ===
+                          "string"
+                        ? testResponse.data
+                        : JSON.stringify(
+                            testResponse.data,
+                            null,
+                            2
+                          )}
+                  </pre>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
     </div>
   );
 }
-
-export default App;
