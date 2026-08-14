@@ -10,35 +10,80 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import ForgotPassword from "./pages/ForgotPassword";
 import Dashboard from "./pages/Dashboard";
-import Api from "./pages/Api";
+import ConnectAPI from "./pages/ConnectAPI";
 
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
 
-        {/* AUTH */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
+        {/* =========================
+            AUTH
+        ========================== */}
+
+        <Route
+          path="/login"
+          element={<Login />}
+        />
+
+        <Route
+          path="/register"
+          element={<Register />}
+        />
+
         <Route
           path="/forgot-password"
           element={<ForgotPassword />}
         />
 
-        {/* MAIN */}
-        <Route path="/dashboard" element={<Dashboard />} />
-        <Route path="/api" element={<Api />} />
 
-        {/* DEFAULT */}
+        {/* =========================
+            MEMBER
+        ========================== */}
+
         <Route
-          path="/"
-          element={<Navigate to="/login" replace />}
+          path="/dashboard"
+          element={<Dashboard />}
         />
 
-        {/* 404 */}
+
+        {/* =========================
+            API
+        ========================== */}
+
+        <Route
+          path="/api"
+          element={<ConnectAPI />}
+        />
+
+
+        {/* =========================
+            DEFAULT
+        ========================== */}
+
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
+
+
+        {/* =========================
+            404
+        ========================== */}
+
         <Route
           path="*"
-          element={<Navigate to="/login" replace />}
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
         />
 
       </Routes>
